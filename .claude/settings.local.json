@@ -5,7 +5,12 @@
       "Bash(timeout 5 go run:*)",
       "Bash(timeout 10 go run:*)",
       "Bash(timeout 15 go run:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(go build:*)",
+      "Bash(timeout 8 go run:*)",
+      "Bash(DISPLAY_MODE=append timeout 8 go run:*)",
+      "Bash(export DISPLAY_MODE=append)",
+      "Bash(timeout 6 go run:*)"
     ],
     "deny": [],
     "ask": []
