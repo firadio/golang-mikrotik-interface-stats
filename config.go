@@ -20,6 +20,7 @@ type Config struct {
 	RateUnit      string // "auto", "bps", "Bps" (bits or Bytes per second)
 	RateScale     string // "auto", "k", "M", "G" (fixed scale)
 	OutputMode    string // "terminal" or "log"
+	Debug         bool   // Enable debug output
 }
 
 // LoadConfig loads configuration from .env file or environment variables
@@ -86,15 +87,21 @@ func LoadConfig() (*Config, error) {
 		outputMode = "terminal" // terminal or log
 	}
 
+	debug := false
+	if os.Getenv("DEBUG") == "true" || os.Getenv("DEBUG") == "1" {
+		debug = true
+	}
+
 	return &Config{
-		Host:       host,
-		Port:       port,
-		Username:   username,
-		Password:   password,
-		Interfaces: interfaces,
+		Host:        host,
+		Port:        port,
+		Username:    username,
+		Password:    password,
+		Interfaces:  interfaces,
 		DisplayMode: displayMode,
 		RateUnit:    rateUnit,
 		RateScale:   rateScale,
 		OutputMode:  outputMode,
+		Debug:       debug,
 	}, nil
 }

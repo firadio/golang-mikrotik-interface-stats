@@ -12,6 +12,7 @@ type Monitor struct {
 	interval   time.Duration
 	interfaces []string
 	writer     OutputWriter
+	debug      bool
 }
 
 // NewMonitor creates a new traffic monitor
@@ -31,6 +32,7 @@ func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
 		interval:   1 * time.Second,
 		interfaces: config.Interfaces,
 		writer:     writer,
+		debug:      config.Debug,
 	}
 }
 
@@ -41,7 +43,7 @@ func (m *Monitor) Start() error {
 	defer ticker.Stop()
 
 	// Get initial stats
-	stats, err := m.client.GetInterfaceStats(m.interfaces)
+	stats, err := m.client.GetInterfaceStats(m.interfaces, m.debug)
 	if err != nil {
 		log.Printf("Warning: Failed to get initial stats: %v", err)
 	} else {
@@ -61,7 +63,7 @@ func (m *Monitor) Start() error {
 
 	// Display loop
 	for range ticker.C {
-		stats, err := m.client.GetInterfaceStats(m.interfaces)
+		stats, err := m.client.GetInterfaceStats(m.interfaces, m.debug)
 		if err != nil {
 			log.Printf("Error getting stats: %v", err)
 			continue

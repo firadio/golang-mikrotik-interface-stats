@@ -42,6 +42,9 @@ RATE_SCALE=auto  # or "k", "M", "G" for fixed scale
 
 # Output mode (optional)
 OUTPUT_MODE=terminal  # or "log"
+
+# Debug mode (optional)
+DEBUG=false  # or "true" to see API commands
 ```
 
 **Configuration Options:**
@@ -72,6 +75,10 @@ OUTPUT_MODE=terminal  # or "log"
 - **OUTPUT_MODE**: Output format
   - `terminal` (default) - Formatted table output for interactive use
   - `log` - Log-style output for running as a service/daemon
+
+- **DEBUG**: Enable debug output
+  - `false` (default) - Normal operation
+  - `true` or `1` - Print Mikrotik API commands being sent (useful for troubleshooting)
 
 See `.env.example` for reference.
 
@@ -206,15 +213,26 @@ The program uses the following Mikrotik API command format:
 ?name=vlan2622
 ?name=vlan2624
 ?#|
+?name=vlan2626
+?#|
 ```
 
 **Explanation:**
 - `=stats` - Get real-time statistics (live counters)
 - `=.proplist=name,rx-byte,tx-byte` - Only return these properties
-- `?name=vlan2622` / `?name=vlan2624` - Filter by interface name
-- `?#|` - OR operator (match either interface)
+- `?name=<interface>` - Filter by interface name
+- `?#|` - OR operator placed **after each interface starting from the second one**
+
+**Important:** The OR operator `?#|` must be placed **after each interface starting from the second one**. This allows the query to match interface1 OR interface2 OR interface3, etc.
+
+Format pattern:
+- 1 interface: `?name=iface1`
+- 2 interfaces: `?name=iface1 ?name=iface2 ?#|`
+- 3 interfaces: `?name=iface1 ?name=iface2 ?#| ?name=iface3 ?#|`
 
 This filters results on the Mikrotik router before sending, reducing network traffic and processing time.
+
+**Troubleshooting:** If you encounter issues with multiple interfaces, enable debug mode by setting `DEBUG=true` in your .env file. This will print the actual API commands being sent to help diagnose the problem.
 
 ## License
 

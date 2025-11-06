@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"time"
 )
@@ -65,6 +66,13 @@ func (t *TerminalOutput) WriteHeader() {
 func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateInfo) {
 	timeStr := timestamp.Format("2006-01-02 15:04:05")
 
+	// Sort interface names for consistent ordering
+	names := make([]string, 0, len(stats))
+	for name := range stats {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	if t.refreshMode {
 		// Refresh mode: clear and redraw
 		clearScreen()
@@ -75,7 +83,8 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 		fmt.Printf("%-15s %-20s %-20s\n", "Interface", "RX Rate", "TX Rate")
 		fmt.Println(strings.Repeat("-", 80))
 
-		for _, info := range stats {
+		for _, name := range names {
+			info := stats[name]
 			rxFormatted := FormatRate(info.RxRate, t.rateUnit, t.rateScale)
 			txFormatted := FormatRate(info.TxRate, t.rateUnit, t.rateScale)
 			fmt.Printf("%-15s %-20s %-20s\n", info.InterfaceName, rxFormatted, txFormatted)
@@ -85,7 +94,8 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 		fmt.Println("Press Ctrl+C to stop")
 	} else {
 		// Append mode: add new lines
-		for _, info := range stats {
+		for _, name := range names {
+			info := stats[name]
 			rxFormatted := FormatRate(info.RxRate, t.rateUnit, t.rateScale)
 			txFormatted := FormatRate(info.TxRate, t.rateUnit, t.rateScale)
 			fmt.Printf("[%s] %s: RX: %s  TX: %s\n",
@@ -117,7 +127,15 @@ func (l *LogOutput) WriteHeader() {
 }
 
 func (l *LogOutput) WriteStats(timestamp time.Time, stats map[string]*RateInfo) {
-	for _, info := range stats {
+	// Sort interface names for consistent ordering
+	names := make([]string, 0, len(stats))
+	for name := range stats {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		info := stats[name]
 		rxFormatted := FormatRate(info.RxRate, l.rateUnit, l.rateScale)
 		txFormatted := FormatRate(info.TxRate, l.rateUnit, l.rateScale)
 		log.Printf("interface=%s rx=%s tx=%s", info.InterfaceName, rxFormatted, txFormatted)

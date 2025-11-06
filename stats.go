@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 )
@@ -22,7 +23,7 @@ type InterfaceRate struct {
 }
 
 // GetInterfaceStats queries the Mikrotik router for interface statistics
-func (c *MikrotikClient) GetInterfaceStats(interfaces []string) ([]InterfaceStats, error) {
+func (c *MikrotikClient) GetInterfaceStats(interfaces []string, debug bool) ([]InterfaceStats, error) {
 	// Query with server-side filtering using Mikrotik API query syntax
 	// =stats              : get real-time statistics (live counters)
 	// =.proplist=         : only return specified properties (name, rx-byte, tx-byte)
@@ -38,23 +39,29 @@ func (c *MikrotikClient) GetInterfaceStats(interfaces []string) ([]InterfaceStat
 	}
 
 	// Add filter for each interface
-	for _, iface := range interfaces {
+	// Mikrotik API OR syntax: ?name=iface1 ?name=iface2 ?#| ?name=iface3 ?#|
+	// The OR operator ?#| comes AFTER each condition (starting from the second)
+	for i, iface := range interfaces {
 		cmd = append(cmd, "?name="+iface)
+		// Add OR operator after each interface starting from the second one
+		if i >= 1 {
+			cmd = append(cmd, "?#|")
+		}
 	}
 
-	// Add OR operator if multiple interfaces
-	if len(interfaces) > 1 {
-		cmd = append(cmd, "?#|")
+	// Debug: print command for troubleshooting (if enabled)
+	if debug {
+		log.Printf("DEBUG: Mikrotik API command: %v", cmd)
 	}
 
 	err := c.sendCommand(cmd...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sendCommand failed: %w", err)
 	}
 
 	responses, err := c.readResponse()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("readResponse failed: %w", err)
 	}
 
 	var stats []InterfaceStats
@@ -67,8 +74,15 @@ func (c *MikrotikClient) GetInterfaceStats(interfaces []string) ([]InterfaceStat
 			continue
 		}
 
-		rxByte, _ := strconv.ParseUint(rxByteStr, 10, 64)
-		txByte, _ := strconv.ParseUint(txByteStr, 10, 64)
+		rxByte, err := strconv.ParseUint(rxByteStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse rx-byte for %s: %w", name, err)
+		}
+
+		txByte, err := strconv.ParseUint(txByteStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse tx-byte for %s: %w", name, err)
+		}
 
 		stats = append(stats, InterfaceStats{
 			Name:   name,
