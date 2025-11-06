@@ -94,8 +94,8 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Parse uplink interface list (comma-separated)
-	// Uplink interfaces: RX=Upload (我发出), TX=Download (我收到)
-	// Other interfaces (default): RX=Download (我收到), TX=Upload (我发出)
+	// Uplink (WAN to ISP): TX=Upload (发到互联网), RX=Download (从互联网收)
+	// Downlink (LAN/VLAN to users): TX=Download (发给用户即用户下载), RX=Upload (收用户的即用户上传)
 	uplinkInterfacesStr := os.Getenv("UPLINK_INTERFACES")
 	var uplinkInterfaces []string
 	if uplinkInterfacesStr != "" {

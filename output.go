@@ -106,13 +106,15 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 
 			// Check if this is an uplink interface
 			if t.uplinkInterfaces[name] {
-				// Uplink: RX=Upload (我发出), TX=Download (我收到)
-				downloadRate = info.TxRate
-				uploadRate = info.RxRate
-			} else {
-				// Downlink (default): RX=Download (我收到), TX=Upload (我发出)
+				// Uplink (WAN to ISP): TX=Upload (to internet), RX=Download (from internet)
+				// This is the "normal" understanding, no swap needed
 				downloadRate = info.RxRate
 				uploadRate = info.TxRate
+			} else {
+				// Downlink (to users/LAN): TX=Download (data to user), RX=Upload (data from user)
+				// From user perspective, needs swap
+				downloadRate = info.TxRate
+				uploadRate = info.RxRate
 			}
 
 			downloadFormatted := FormatRate(downloadRate, t.rateUnit, t.rateScale)
@@ -132,13 +134,15 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 
 			// Check if this is an uplink interface
 			if t.uplinkInterfaces[name] {
-				// Uplink: RX=Upload (我发出), TX=Download (我收到)
-				downloadRate = info.TxRate
-				uploadRate = info.RxRate
-			} else {
-				// Downlink (default): RX=Download (我收到), TX=Upload (我发出)
+				// Uplink (WAN to ISP): TX=Upload (to internet), RX=Download (from internet)
+				// This is the "normal" understanding, no swap needed
 				downloadRate = info.RxRate
 				uploadRate = info.TxRate
+			} else {
+				// Downlink (to users/LAN): TX=Download (data to user), RX=Upload (data from user)
+				// From user perspective, needs swap
+				downloadRate = info.TxRate
+				uploadRate = info.RxRate
 			}
 
 			downloadFormatted := FormatRate(downloadRate, t.rateUnit, t.rateScale)
@@ -193,13 +197,15 @@ func (l *LogOutput) WriteStats(timestamp time.Time, stats map[string]*RateInfo) 
 
 		// Check if this is an uplink interface
 		if l.uplinkInterfaces[name] {
-			// Uplink: RX=Upload (我发出), TX=Download (我收到)
-			downloadRate = info.TxRate
-			uploadRate = info.RxRate
-		} else {
-			// Downlink (default): RX=Download (我收到), TX=Upload (我发出)
+			// Uplink (WAN to ISP): TX=Upload (to internet), RX=Download (from internet)
+			// This is the "normal" understanding, no swap needed
 			downloadRate = info.RxRate
 			uploadRate = info.TxRate
+		} else {
+			// Downlink (to users/LAN): TX=Download (data to user), RX=Upload (data from user)
+			// From user perspective, needs swap
+			downloadRate = info.TxRate
+			uploadRate = info.RxRate
 		}
 
 		downloadFormatted := FormatRate(downloadRate, l.rateUnit, l.rateScale)

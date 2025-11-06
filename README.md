@@ -56,11 +56,11 @@ DEBUG=false  # or "true" to see API commands
 - **INTERFACES**: Comma-separated list of interfaces to monitor (default: vlan2622,vlan2624)
 
 - **UPLINK_INTERFACES**: Comma-separated list of uplink interfaces (optional)
-  - **Uplink interfaces**: RX=Upload (outgoing), TX=Download (incoming)
-  - **Other interfaces** (default): RX=Download (incoming), TX=Upload (outgoing)
+  - **Uplink (WAN to ISP)**: TX=Upload, RX=Download (normal understanding)
+  - **Downlink (LAN/VLAN to users)**: TX=Download (to user), RX=Upload (from user) - needs swap
   - Example: `UPLINK_INTERFACES=ether1,sfp1` if ether1 and sfp1 connect to ISP
   - Leave empty if all monitored interfaces are downlink (e.g., LANs, VLANs)
-  - **Why needed?** Network devices see traffic from their perspective. For uplink ports connected to ISP, received traffic (RX) is what you upload to internet, transmitted traffic (TX) is what you download from internet.
+  - **Why needed?** For downlink interfaces, the router sends data TO users (TX), which is actually user's Download. The router receives data FROM users (RX), which is actually user's Upload.
 
 - **DISPLAY_MODE**: How to display output
   - `refresh` (default) - Redraw display like `top`/`htop`
