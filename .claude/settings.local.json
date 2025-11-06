@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod tidy:*)",
+      "Bash(timeout 5 go run:*)",
+      "Bash(timeout 10 go run:*)",
+      "Bash(timeout 15 go run:*)",
+      "Bash(go run:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
