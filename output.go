@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -335,4 +336,135 @@ func (l *LogOutput) WriteStats(timestamp time.Time, stats map[string]*RateInfo) 
 
 func (l *LogOutput) Close() {
 	log.Println("Mikrotik Interface Traffic Monitor stopped")
+}
+
+// ============================================================================
+// Structured Logger (for LOG_ENABLED mode)
+// ============================================================================
+
+// StructuredLogger implements structured logging output
+// Suitable for running as a service with JSON or text format
+type StructuredLogger struct {
+	config           *LogConfig
+	uplinkInterfaces map[string]bool
+	writer           *log.Logger
+	file             *os.File // Only used if Output="file"
+}
+
+// NewStructuredLogger creates a new structured logger
+func NewStructuredLogger(config *LogConfig, uplinkInterfaces []string) *StructuredLogger {
+	// Convert uplink interface list to set for O(1) lookup
+	uplinkSet := make(map[string]bool, len(uplinkInterfaces))
+	for _, iface := range uplinkInterfaces {
+		uplinkSet[iface] = true
+	}
+
+	logger := &StructuredLogger{
+		config:           config,
+		uplinkInterfaces: uplinkSet,
+	}
+
+	// Setup output writer
+	if config.Output == "file" {
+		// Open log file with append mode
+		file, err := os.OpenFile(config.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			log.Fatalf("Failed to open log file %s: %v", config.File, err)
+		}
+		logger.file = file
+		logger.writer = log.New(file, "", 0) // No prefix, we'll format ourselves
+	} else {
+		// Use stdout
+		logger.writer = log.New(os.Stdout, "", 0)
+	}
+
+	return logger
+}
+
+// WriteHeader initializes logging
+func (s *StructuredLogger) WriteHeader() {
+	if s.config.Format == "json" {
+		s.writer.Printf(`{"level":"info","msg":"Mikrotik Interface Traffic Monitor started"}`)
+	} else {
+		s.writer.Printf("%s [INFO] Mikrotik Interface Traffic Monitor started", time.Now().Format(time.RFC3339))
+	}
+}
+
+// WriteStats writes statistics in structured format
+func (s *StructuredLogger) WriteStats(timestamp time.Time, stats map[string]*RateInfo) {
+	// Sort interface names for consistent ordering
+	names := make([]string, 0, len(stats))
+	for name := range stats {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		info := stats[name]
+		var downloadRate, uploadRate float64
+
+		// Convert RX/TX to Upload/Download based on interface type
+		if s.uplinkInterfaces[name] {
+			// Uplink: no swap
+			uploadRate = info.TxRate
+			downloadRate = info.RxRate
+		} else {
+			// Downlink: swap TX/RX
+			uploadRate = info.RxRate
+			downloadRate = info.TxRate
+		}
+
+		// Format based on configured format
+		if s.config.Format == "json" {
+			s.writeJSON(timestamp, info.InterfaceName, uploadRate, downloadRate)
+		} else {
+			s.writeText(timestamp, info.InterfaceName, uploadRate, downloadRate)
+		}
+	}
+}
+
+// writeJSON writes a JSON log entry
+func (s *StructuredLogger) writeJSON(timestamp time.Time, iface string, uploadRate, downloadRate float64) {
+	// Format rates
+	uploadFormatted := FormatRate(uploadRate, s.config.RateUnit, s.config.RateScale)
+	downloadFormatted := FormatRate(downloadRate, s.config.RateUnit, s.config.RateScale)
+
+	// Write JSON (single line)
+	s.writer.Printf(`{"time":"%s","interface":"%s","upload":"%s","download":"%s","upload_bps":%.0f,"download_bps":%.0f}`,
+		timestamp.Format(time.RFC3339),
+		iface,
+		strings.TrimSpace(uploadFormatted),
+		strings.TrimSpace(downloadFormatted),
+		uploadRate*8,   // Convert to bits for numeric field
+		downloadRate*8,
+	)
+}
+
+// writeText writes a text log entry
+func (s *StructuredLogger) writeText(timestamp time.Time, iface string, uploadRate, downloadRate float64) {
+	// Format rates
+	uploadFormatted := FormatRate(uploadRate, s.config.RateUnit, s.config.RateScale)
+	downloadFormatted := FormatRate(downloadRate, s.config.RateUnit, s.config.RateScale)
+
+	// Write text format
+	s.writer.Printf("%s interface=%s upload=%s download=%s",
+		timestamp.Format(time.RFC3339),
+		iface,
+		strings.TrimSpace(uploadFormatted),
+		strings.TrimSpace(downloadFormatted),
+	)
+}
+
+// Close closes the logger
+func (s *StructuredLogger) Close() {
+	if s.config.Format == "json" {
+		s.writer.Printf(`{"level":"info","msg":"Mikrotik Interface Traffic Monitor stopped"}`)
+	} else {
+		s.writer.Printf("%s [INFO] Mikrotik Interface Traffic Monitor stopped", time.Now().Format(time.RFC3339))
+	}
+
+	// Close file if opened
+	if s.file != nil {
+		s.file.Close()
+	}
 }

@@ -7,35 +7,77 @@ import (
 
 // Monitor handles traffic monitoring and rate calculation
 type Monitor struct {
-	client          *MikrotikClient              // Mikrotik API client
-	rateMap         map[string]*InterfaceRate    // Interface rate tracking state
-	interval        time.Duration                // Monitoring interval (1 second)
-	interfaces      []string                     // List of interfaces to monitor
-	writer          OutputWriter                 // Output handler (terminal/log/metrics)
-	debug           bool                         // Enable debug logging
-	statsWindowSize int                          // Statistics window size in seconds
+	client           *MikrotikClient           // Mikrotik API client
+	rateMap          map[string]*InterfaceRate // Interface rate tracking state
+	interval         time.Duration             // Monitoring interval (1 second)
+	interfaces       []string                  // List of interfaces to monitor
+	uplinkInterfaces map[string]bool           // Uplink interface set
+	debug            bool                      // Enable debug logging
+	statsWindowSize  int                       // Statistics window size in seconds
+
+	// Optional output components (nil if disabled)
+	terminalWriter *TerminalOutput     // Terminal output
+	logWriter      *StructuredLogger   // Structured log output
+	webServer      *WebServer          // Web server
+	vmClient       *VMClient           // VictoriaMetrics client
+	aggregator     *TimeWindowAggregator // Time window aggregator
 }
 
-// NewMonitor creates a new traffic monitor with appropriate output writer
+// NewMonitor creates a new traffic monitor with appropriate output handlers
 func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
-	// Select output writer based on configuration
-	var writer OutputWriter
-	if config.OutputMode == "log" {
-		writer = NewLogOutput(config.RateUnit, config.RateScale, config.UplinkInterfaces, config.StatsWindowSize)
-	} else {
-		refreshMode := config.DisplayMode != "append"
-		writer = NewTerminalOutput(refreshMode, config.RateUnit, config.RateScale, config.UplinkInterfaces, config.StatsWindowSize)
+	m := &Monitor{
+		client:           client,
+		rateMap:          make(map[string]*InterfaceRate),
+		interval:         1 * time.Second,
+		interfaces:       config.Interfaces,
+		uplinkInterfaces: toSet(config.UplinkInterfaces),
+		debug:            config.Debug,
+		statsWindowSize:  config.StatsWindowSize,
 	}
 
-	return &Monitor{
-		client:          client,
-		rateMap:         make(map[string]*InterfaceRate),
-		interval:        1 * time.Second,
-		interfaces:      config.Interfaces,
-		writer:          writer,
-		debug:           config.Debug,
-		statsWindowSize: config.StatsWindowSize,
+	// Initialize terminal output if enabled
+	if config.Terminal != nil {
+		refreshMode := config.Terminal.Mode == "refresh"
+		m.terminalWriter = NewTerminalOutput(
+			refreshMode,
+			config.Terminal.RateUnit,
+			config.Terminal.RateScale,
+			config.UplinkInterfaces,
+			config.StatsWindowSize,
+		)
 	}
+
+	// Initialize log output if enabled
+	if config.Log != nil {
+		m.logWriter = NewStructuredLogger(config.Log, config.UplinkInterfaces)
+	}
+
+	// Initialize web server if enabled
+	if config.Web != nil {
+		m.webServer = NewWebServer(config.Web, config.UplinkInterfaces)
+	}
+
+	// Initialize VictoriaMetrics if enabled
+	if config.VictoriaMetrics != nil {
+		m.vmClient = NewVMClient(config.VictoriaMetrics)
+		m.aggregator = NewTimeWindowAggregator(
+			config.VictoriaMetrics.ShortInterval,
+			config.VictoriaMetrics.LongInterval,
+			config.VictoriaMetrics.EnableShort,
+			config.VictoriaMetrics.EnableLong,
+		)
+	}
+
+	return m
+}
+
+// toSet converts a slice to a set (map[string]bool)
+func toSet(list []string) map[string]bool {
+	set := make(map[string]bool, len(list))
+	for _, item := range list {
+		set[item] = true
+	}
+	return set
 }
 
 // Start begins the monitoring loop
@@ -50,8 +92,21 @@ func (m *Monitor) Start() error {
 		log.Printf("Warning: Failed to get initial stats: %v", err)
 	}
 
-	// Write output header
-	m.writer.WriteHeader()
+	// Start web server if enabled
+	if m.webServer != nil {
+		if err := m.webServer.Start(); err != nil {
+			log.Printf("Warning: Failed to start web server: %v", err)
+		}
+		defer m.webServer.Stop()
+	}
+
+	// Write header for terminal/log output
+	if m.terminalWriter != nil {
+		m.terminalWriter.WriteHeader()
+	}
+	if m.logWriter != nil {
+		m.logWriter.WriteHeader()
+	}
 
 	// Main monitoring loop
 	for range ticker.C {
@@ -99,9 +154,39 @@ func (m *Monitor) updateAndDisplay() error {
 	now := time.Now()
 	rateInfoMap := m.calculateRates(stats, now)
 
-	// Write stats if we have any
-	if len(rateInfoMap) > 0 {
-		m.writer.WriteStats(now, rateInfoMap)
+	if len(rateInfoMap) == 0 {
+		return nil
+	}
+
+	// 1. Terminal output (if enabled)
+	if m.terminalWriter != nil {
+		m.terminalWriter.WriteStats(now, rateInfoMap)
+	}
+
+	// 2. Structured log output (if enabled)
+	if m.logWriter != nil {
+		m.logWriter.WriteStats(now, rateInfoMap)
+	}
+
+	// 3. WebSocket push (if enabled)
+	if m.webServer != nil {
+		m.webServer.BroadcastStats(now, rateInfoMap)
+	}
+
+	// 4. VictoriaMetrics aggregation (if enabled)
+	if m.aggregator != nil {
+		for _, rateInfo := range rateInfoMap {
+			m.aggregator.AddSample(now, rateInfo)
+		}
+
+		// Check for completed windows and send to VM
+		if windows := m.aggregator.GetCompletedWindows(); len(windows) > 0 {
+			for _, window := range windows {
+				if err := m.vmClient.SendMetrics(window); err != nil {
+					log.Printf("[VM] Failed to send metrics: %v", err)
+				}
+			}
+		}
 	}
 
 	return nil
