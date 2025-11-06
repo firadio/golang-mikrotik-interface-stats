@@ -7,12 +7,13 @@ import (
 
 // Monitor monitors interface traffic and displays statistics
 type Monitor struct {
-	client     *MikrotikClient
-	rateMap    map[string]*InterfaceRate
-	interval   time.Duration
-	interfaces []string
-	writer     OutputWriter
-	debug      bool
+	client          *MikrotikClient
+	rateMap         map[string]*InterfaceRate
+	interval        time.Duration
+	interfaces      []string
+	writer          OutputWriter
+	debug           bool
+	statsWindowSize int // Statistics window size in seconds
 }
 
 // NewMonitor creates a new traffic monitor
@@ -20,19 +21,20 @@ func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
 	// Create appropriate output writer based on config
 	var writer OutputWriter
 	if config.OutputMode == "log" {
-		writer = NewLogOutput(config.RateUnit, config.RateScale, config.UplinkInterfaces)
+		writer = NewLogOutput(config.RateUnit, config.RateScale, config.UplinkInterfaces, config.StatsWindowSize)
 	} else {
 		refreshMode := config.DisplayMode != "append"
-		writer = NewTerminalOutput(refreshMode, config.RateUnit, config.RateScale, config.UplinkInterfaces)
+		writer = NewTerminalOutput(refreshMode, config.RateUnit, config.RateScale, config.UplinkInterfaces, config.StatsWindowSize)
 	}
 
 	return &Monitor{
-		client:     client,
-		rateMap:    make(map[string]*InterfaceRate),
-		interval:   1 * time.Second,
-		interfaces: config.Interfaces,
-		writer:     writer,
-		debug:      config.Debug,
+		client:          client,
+		rateMap:         make(map[string]*InterfaceRate),
+		interval:        1 * time.Second,
+		interfaces:      config.Interfaces,
+		writer:          writer,
+		debug:           config.Debug,
+		statsWindowSize: config.StatsWindowSize,
 	}
 }
 
@@ -54,6 +56,8 @@ func (m *Monitor) Start() error {
 				LastRxByte: stat.RxByte,
 				LastTxByte: stat.TxByte,
 				LastTime:   now,
+				TxHistory:  make([]float64, m.statsWindowSize),
+				RxHistory:  make([]float64, m.statsWindowSize),
 			}
 		}
 	}
@@ -89,16 +93,45 @@ func (m *Monitor) Start() error {
 					rxRate := float64(stat.RxByte-prev.LastRxByte) / timeDiff
 					txRate := float64(stat.TxByte-prev.LastTxByte) / timeDiff
 
+					// Update history (ring buffer) - store raw RX/TX rates
+					prev.TxHistory[prev.HistoryIndex] = txRate
+					prev.RxHistory[prev.HistoryIndex] = rxRate
+					prev.HistoryIndex = (prev.HistoryIndex + 1) % m.statsWindowSize
+					if prev.HistoryCount < m.statsWindowSize {
+						prev.HistoryCount++
+					}
+
+					// Calculate average and peak from history
+					var txSum, rxSum float64
+					txPeak := txRate
+					rxPeak := rxRate
+					for i := 0; i < prev.HistoryCount; i++ {
+						txSum += prev.TxHistory[i]
+						rxSum += prev.RxHistory[i]
+						if prev.TxHistory[i] > txPeak {
+							txPeak = prev.TxHistory[i]
+						}
+						if prev.RxHistory[i] > rxPeak {
+							rxPeak = prev.RxHistory[i]
+						}
+					}
+					txAvg := txSum / float64(prev.HistoryCount)
+					rxAvg := rxSum / float64(prev.HistoryCount)
+
 					// Update stored values for next calculation
 					prev.LastRxByte = stat.RxByte
 					prev.LastTxByte = stat.TxByte
 					prev.LastTime = now
 
-					// Add to rate info map
+					// Add to rate info map - use RX/TX naming
 					rateInfoMap[stat.Name] = &RateInfo{
 						InterfaceName: stat.Name,
 						RxRate:        rxRate,
 						TxRate:        txRate,
+						RxAvg:         rxAvg, // RX average
+						TxAvg:         txAvg, // TX average
+						RxPeak:        rxPeak, // RX peak
+						TxPeak:        txPeak, // TX peak
 					}
 				}
 			} else {
@@ -108,6 +141,8 @@ func (m *Monitor) Start() error {
 					LastRxByte: stat.RxByte,
 					LastTxByte: stat.TxByte,
 					LastTime:   now,
+					TxHistory:  make([]float64, m.statsWindowSize),
+					RxHistory:  make([]float64, m.statsWindowSize),
 				}
 			}
 		}

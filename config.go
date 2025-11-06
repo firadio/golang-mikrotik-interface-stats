@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -22,6 +23,7 @@ type Config struct {
 	OutputMode       string   // "terminal" or "log"
 	Debug            bool     // Enable debug output
 	UplinkInterfaces []string // List of uplink interfaces (RX=Upload, TX=Download)
+	StatsWindowSize  int      // Statistics window size in seconds (default 10)
 }
 
 // LoadConfig loads configuration from .env file or environment variables
@@ -105,6 +107,14 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
+	// Parse statistics window size (in seconds)
+	statsWindowSize := 10 // default
+	if statsWindowStr := os.Getenv("STATS_WINDOW_SIZE"); statsWindowStr != "" {
+		if size, err := strconv.Atoi(statsWindowStr); err == nil && size > 0 && size <= 60 {
+			statsWindowSize = size
+		}
+	}
+
 	return &Config{
 		Host:             host,
 		Port:             port,
@@ -117,5 +127,6 @@ func LoadConfig() (*Config, error) {
 		OutputMode:       outputMode,
 		Debug:            debug,
 		UplinkInterfaces: uplinkInterfaces,
+		StatsWindowSize:  statsWindowSize,
 	}, nil
 }

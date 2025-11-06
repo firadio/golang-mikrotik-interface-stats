@@ -20,6 +20,12 @@ type InterfaceRate struct {
 	LastRxByte uint64
 	LastTxByte uint64
 	LastTime   time.Time
+
+	// History for statistics window (ring buffer)
+	TxHistory    []float64 // TX rates (bytes/s)
+	RxHistory    []float64 // RX rates (bytes/s)
+	HistoryIndex int       // Current position in ring buffer
+	HistoryCount int       // Number of valid entries (0 to window size)
 }
 
 // GetInterfaceStats queries the Mikrotik router for interface statistics
@@ -106,6 +112,48 @@ func FormatBytes(bytes float64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.2f %cB/s", bytes/div, "KMGTPE"[exp])
+}
+
+// formatCompact formats rate in compact form (max 10 chars)
+// Returns format like "1.2M" or "500k"
+func formatCompact(bytesPerSec float64, rateUnit string, rateScale string) string {
+	var value float64
+	var unit string
+
+	// Convert to bits or keep as bytes
+	if rateUnit == "bps" {
+		value = bytesPerSec * 8
+		unit = "b"
+	} else {
+		value = bytesPerSec
+		unit = "B"
+	}
+
+	// Apply scale
+	switch rateScale {
+	case "k":
+		value = value / 1000
+		return fmt.Sprintf("%.1f%ck", value, unit[0])
+	case "M":
+		value = value / 1000000
+		return fmt.Sprintf("%.1f%cM", value, unit[0])
+	case "G":
+		value = value / 1000000000
+		return fmt.Sprintf("%.1f%cG", value, unit[0])
+	case "auto":
+		// Auto scale with compact format
+		if value < 1000 {
+			return fmt.Sprintf("%.0f%c", value, unit[0])
+		} else if value < 1000000 {
+			return fmt.Sprintf("%.1f%ck", value/1000, unit[0])
+		} else if value < 1000000000 {
+			return fmt.Sprintf("%.1f%cM", value/1000000, unit[0])
+		} else {
+			return fmt.Sprintf("%.1f%cG", value/1000000000, unit[0])
+		}
+	default:
+		return fmt.Sprintf("%.0f%c", value, unit[0])
+	}
 }
 
 // FormatRate formats rate according to configuration

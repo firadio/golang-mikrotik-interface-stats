@@ -127,21 +127,31 @@ go build -o mikrotik-stats
 
 ## Output Examples
 
-**Refresh Mode (default) with auto scale:**
+**Refresh Mode (default) with 7-column numeric display:**
 ```
 Mikrotik Interface Traffic Monitor
 ================================================================================
 Time: 2025-11-07 01:08:36
+Unit: MB/s
 --------------------------------------------------------------------------------
-Interface       Upload               Download
+Interface          Up       Down      UpAvg      DnAvg     UpPeak     DnPeak
 --------------------------------------------------------------------------------
-vlan2622        30.04 KB/s           26.43 KB/s
-vlan2624        580.37 KB/s          3.19 MB/s
+vlan2622         0.03       0.03       0.03       0.03       0.04       0.03
+vlan2624         0.58       3.19       0.52       3.10       0.65       3.50
 --------------------------------------------------------------------------------
 Press Ctrl+C to stop
 ```
 
-Note: Display shows "Upload" (left) and "Download" (right) from user perspective. If an interface is configured as uplink, RX/TX are swapped automatically.
+**Features:**
+- **Unit on top**: Single unit display (e.g., "MB/s", "kbps") applies to all columns
+- **Pure numeric**: All values are numbers with .00 decimal format
+- **Right-aligned**: Easy to compare values visually
+- **Real-time rates**: Current upload/download speeds (Up/Down)
+- **10-second averages**: UpAvg/DnAvg - smoothed rates over last 10 seconds
+- **10-second peaks**: UpPeak/DnPeak - maximum speeds in last 10 seconds
+- **80-column display**: 7 columns × 10 chars = 70 chars (fits standard terminals)
+
+Note: Display shows "Upload" and "Download" from user perspective. If an interface is configured as uplink, RX/TX are swapped automatically.
 
 **Append Mode:**
 ```
