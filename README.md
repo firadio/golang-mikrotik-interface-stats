@@ -133,15 +133,15 @@ Mikrotik Interface Traffic Monitor
 ================================================================================
 Time: 2025-11-07 01:08:36
 --------------------------------------------------------------------------------
-Interface       Download             Upload
+Interface       Upload               Download
 --------------------------------------------------------------------------------
-vlan2622        26.43 KB/s           30.04 KB/s
-vlan2624        3.19 MB/s            580.37 KB/s
+vlan2622        30.04 KB/s           26.43 KB/s
+vlan2624        580.37 KB/s          3.19 MB/s
 --------------------------------------------------------------------------------
 Press Ctrl+C to stop
 ```
 
-Note: Display shows "Download" and "Upload" from user perspective. If an interface is configured as uplink, RX/TX are swapped automatically.
+Note: Display shows "Upload" (left) and "Download" (right) from user perspective. If an interface is configured as uplink, RX/TX are swapped automatically.
 
 **Append Mode:**
 ```
@@ -149,10 +149,10 @@ Note: Display shows "Download" and "Upload" from user perspective. If an interfa
 
 Monitoring interface traffic (Ctrl+C to stop):
 ================================================================================
-[2025-11-07 01:09:13] vlan2622: Download: 15.82 KB/s  Upload: 18.12 KB/s
-[2025-11-07 01:09:13] vlan2624: Download: 3.00 MB/s  Upload: 655.47 KB/s
-[2025-11-07 01:09:14] vlan2622: Download: 16.60 KB/s  Upload: 50.48 KB/s
-[2025-11-07 01:09:14] vlan2624: Download: 3.64 MB/s  Upload: 431.54 KB/s
+[2025-11-07 01:09:13] vlan2622: Upload: 18.12 KB/s  Download: 15.82 KB/s
+[2025-11-07 01:09:13] vlan2624: Upload: 655.47 KB/s  Download: 3.00 MB/s
+[2025-11-07 01:09:14] vlan2622: Upload: 50.48 KB/s  Download: 16.60 KB/s
+[2025-11-07 01:09:14] vlan2624: Upload: 431.54 KB/s  Download: 3.64 MB/s
 ```
 
 **Fixed scale mode (RATE_SCALE=M):**
@@ -161,10 +161,10 @@ Mikrotik Interface Traffic Monitor
 ================================================================================
 Time: 2025-11-07 01:08:36
 --------------------------------------------------------------------------------
-Interface       Download             Upload
+Interface       Upload               Download
 --------------------------------------------------------------------------------
 vlan2622          0.03 MB/s            0.03 MB/s
-vlan2624          3.19 MB/s            0.58 MB/s
+vlan2624          0.58 MB/s            3.19 MB/s
 --------------------------------------------------------------------------------
 Press Ctrl+C to stop
 ```
@@ -173,10 +173,10 @@ Press Ctrl+C to stop
 ```
 2025/11/07 01:09:12 Connected to Mikrotik at 175.100.109.154:65428
 2025/11/07 01:09:12 Mikrotik Interface Traffic Monitor started
-2025/11/07 01:09:13 interface=vlan2622 download=15.82 KB/s upload=18.12 KB/s
-2025/11/07 01:09:13 interface=vlan2624 download=3.00 MB/s upload=655.47 KB/s
-2025/11/07 01:09:14 interface=vlan2622 download=16.60 KB/s upload=50.48 KB/s
-2025/11/07 01:09:14 interface=vlan2624 download=3.64 MB/s upload=431.54 KB/s
+2025/11/07 01:09:13 interface=vlan2622 upload=18.12 KB/s download=15.82 KB/s
+2025/11/07 01:09:13 interface=vlan2624 upload=655.47 KB/s download=3.00 MB/s
+2025/11/07 01:09:14 interface=vlan2622 upload=50.48 KB/s download=16.60 KB/s
+2025/11/07 01:09:14 interface=vlan2624 upload=431.54 KB/s download=3.64 MB/s
 ```
 
 ## Requirements

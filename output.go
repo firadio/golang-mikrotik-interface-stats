@@ -97,7 +97,7 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 		fmt.Println(strings.Repeat("=", 80))
 		fmt.Printf("Time: %s\n", timeStr)
 		fmt.Println(strings.Repeat("-", 80))
-		fmt.Printf("%-15s %-20s %-20s\n", "Interface", "Download", "Upload")
+		fmt.Printf("%-15s %-20s %-20s\n", "Interface", "Upload", "Download")
 		fmt.Println(strings.Repeat("-", 80))
 
 		for _, name := range names {
@@ -119,7 +119,7 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 
 			downloadFormatted := FormatRate(downloadRate, t.rateUnit, t.rateScale)
 			uploadFormatted := FormatRate(uploadRate, t.rateUnit, t.rateScale)
-			fmt.Printf("%-15s %-20s %-20s\n", info.InterfaceName, downloadFormatted, uploadFormatted)
+			fmt.Printf("%-15s %-20s %-20s\n", info.InterfaceName, uploadFormatted, downloadFormatted)
 		}
 
 		fmt.Println(strings.Repeat("-", 80))
@@ -147,8 +147,8 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 
 			downloadFormatted := FormatRate(downloadRate, t.rateUnit, t.rateScale)
 			uploadFormatted := FormatRate(uploadRate, t.rateUnit, t.rateScale)
-			fmt.Printf("[%s] %s: Download: %s  Upload: %s\n",
-				timeStr, info.InterfaceName, downloadFormatted, uploadFormatted)
+			fmt.Printf("[%s] %s: Upload: %s  Download: %s\n",
+				timeStr, info.InterfaceName, uploadFormatted, downloadFormatted)
 		}
 	}
 }
@@ -210,7 +210,7 @@ func (l *LogOutput) WriteStats(timestamp time.Time, stats map[string]*RateInfo) 
 
 		downloadFormatted := FormatRate(downloadRate, l.rateUnit, l.rateScale)
 		uploadFormatted := FormatRate(uploadRate, l.rateUnit, l.rateScale)
-		log.Printf("interface=%s download=%s upload=%s", info.InterfaceName, downloadFormatted, uploadFormatted)
+		log.Printf("interface=%s upload=%s download=%s", info.InterfaceName, uploadFormatted, downloadFormatted)
 	}
 }
 
