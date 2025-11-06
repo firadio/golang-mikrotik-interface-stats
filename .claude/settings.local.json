@@ -10,7 +10,8 @@
       "Bash(timeout 8 go run:*)",
       "Bash(DISPLAY_MODE=append timeout 8 go run:*)",
       "Bash(export DISPLAY_MODE=append)",
-      "Bash(timeout 6 go run:*)"
+      "Bash(timeout 6 go run:*)",
+      "Bash(go get:*)"
     ],
     "deny": [],
     "ask": []

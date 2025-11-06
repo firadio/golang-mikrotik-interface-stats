@@ -26,11 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Output to stdout or file
   - Suitable for systemd services
 
-- **Web Service** (WEB_ENABLED) - Stub implementation
-  - HTTP server framework
-  - WebSocket real-time push (planned)
-  - REST API for historical queries (planned)
-  - Static web UI (planned)
+- **Web Service** (WEB_ENABLED)
+  - HTTP server with route management
+  - WebSocket real-time push with auto-reconnect
+  - REST API for current statistics (/api/current)
+  - Embedded dark-theme responsive web UI
+  - Thread-safe client connection management
+  - Stats caching for immediate delivery to new connections
 
 - **VictoriaMetrics Integration** (VM_ENABLED) - Stub implementation
   - Time window aggregator (planned)
