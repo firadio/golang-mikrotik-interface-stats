@@ -8,30 +8,35 @@ import (
 	"time"
 )
 
-// getUnitSuffix returns the unit suffix for display
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+// getUnitSuffix returns the unit suffix string for display headers
 func getUnitSuffix(rateUnit string, rateScale string) string {
-	var unit string
+	var baseUnit string
 	if rateUnit == "bps" {
-		unit = "bps"
+		baseUnit = "bps"
 	} else {
-		unit = "B/s"
+		baseUnit = "B/s"
 	}
 
 	switch rateScale {
 	case "k":
-		return "k" + unit
+		return "k" + baseUnit
 	case "M":
-		return "M" + unit
+		return "M" + baseUnit
 	case "G":
-		return "G" + unit
+		return "G" + baseUnit
 	case "auto":
-		return "auto-" + unit
+		return "auto-" + baseUnit
 	default:
-		return unit
+		return baseUnit
 	}
 }
 
-// formatNumeric formats rate as numeric value only (no unit)
+// formatNumeric formats rate as numeric value only (no unit suffix)
+// Used for table display where unit is shown in header
 func formatNumeric(bytesPerSec float64, rateUnit string, rateScale string) string {
 	var value float64
 
@@ -42,19 +47,16 @@ func formatNumeric(bytesPerSec float64, rateUnit string, rateScale string) strin
 		value = bytesPerSec
 	}
 
-	// Apply scale
+	// Apply scale and format
 	switch rateScale {
 	case "k":
-		value = value / 1000
-		return fmt.Sprintf("%.2f", value)
+		return fmt.Sprintf("%.2f", value/1000)
 	case "M":
-		value = value / 1000000
-		return fmt.Sprintf("%.2f", value)
+		return fmt.Sprintf("%.2f", value/1000000)
 	case "G":
-		value = value / 1000000000
-		return fmt.Sprintf("%.2f", value)
+		return fmt.Sprintf("%.2f", value/1000000000)
 	case "auto":
-		// Auto scale - pick appropriate unit
+		// Auto scale - includes unit suffix in value
 		if value < 1000 {
 			return fmt.Sprintf("%.2f", value)
 		} else if value < 1000000 {
@@ -69,58 +71,64 @@ func formatNumeric(bytesPerSec float64, rateUnit string, rateScale string) strin
 	}
 }
 
-// clearScreen clears the terminal screen using ANSI escape codes
+// ANSI escape code utilities for terminal control
+
+// clearScreen clears the entire terminal screen using ANSI codes
+// \033[2J - clear entire screen
+// \033[H  - move cursor to home position (1,1)
 func clearScreen() {
-	// Use ANSI escape codes to clear screen and move cursor to home
-	// This works on:
-	// - Linux/macOS terminals
-	// - Windows 10+ with Virtual Terminal Processing enabled
-	// - Windows Terminal, PowerShell 7+, Git Bash, etc.
-	//
-	// \033[2J - clear entire screen
-	// \033[H - move cursor to home position (1,1)
 	fmt.Print("\033[2J\033[H")
 }
 
 // moveCursorHome moves cursor to top-left without clearing screen
+// \033[H - move cursor to home position (1,1)
+// More efficient than clearScreen, reduces flicker
 func moveCursorHome() {
-	// \033[H - move cursor to home position (1,1)
-	// This allows overwriting previous content without clearing
-	// More efficient than full screen clear, reduces flicker
 	fmt.Print("\033[H")
 }
 
-// OutputWriter defines the interface for output handling
+// ============================================================================
+// Output Interface
+// ============================================================================
+
+// OutputWriter defines the interface for output implementations
+// Allows multiple output formats (terminal, log, metrics, etc.)
 type OutputWriter interface {
-	WriteHeader()
-	WriteStats(timestamp time.Time, stats map[string]*RateInfo)
-	Close()
+	WriteHeader()                                          // Initialize output (print headers, etc.)
+	WriteStats(timestamp time.Time, stats map[string]*RateInfo) // Write statistics
+	Close()                                                // Cleanup resources
 }
 
-// RateInfo holds rate information for display
+// RateInfo holds calculated rate information for an interface
+// All rates are in bytes/second (RX/TX naming)
+// Display layer converts to Upload/Download based on interface type
 type RateInfo struct {
-	InterfaceName string
-	RxRate        float64
-	TxRate        float64
-	RxAvg         float64 // Average RX rate (over stats window)
-	TxAvg         float64 // Average TX rate (over stats window)
-	RxPeak        float64 // Peak RX rate (over stats window)
-	TxPeak        float64 // Peak TX rate (over stats window)
+	InterfaceName string  // Interface name
+	RxRate        float64 // Current RX rate (bytes/s)
+	TxRate        float64 // Current TX rate (bytes/s)
+	RxAvg         float64 // Average RX rate over stats window
+	TxAvg         float64 // Average TX rate over stats window
+	RxPeak        float64 // Peak RX rate over stats window
+	TxPeak        float64 // Peak TX rate over stats window
 }
 
-// TerminalOutput handles terminal output (refresh or append mode)
+// ============================================================================
+// Terminal Output (refresh/append modes)
+// ============================================================================
+
+// TerminalOutput implements OutputWriter for terminal display
 type TerminalOutput struct {
-	refreshMode      bool
-	rateUnit         string
-	rateScale        string
-	uplinkInterfaces map[string]bool // Set of uplink interface names
+	refreshMode      bool            // true = refresh mode (like top), false = append mode (like tail -f)
+	rateUnit         string          // "bps" or "Bps"
+	rateScale        string          // "auto", "k", "M", "G"
+	uplinkInterfaces map[string]bool // Set of uplink interface names for RX/TX swapping
 	statsWindowSize  int             // Statistics window size in seconds
 }
 
 // NewTerminalOutput creates a new terminal output handler
 func NewTerminalOutput(refreshMode bool, rateUnit, rateScale string, uplinkInterfaces []string, statsWindowSize int) *TerminalOutput {
-	// Build uplink interface set for fast lookup
-	uplinkSet := make(map[string]bool)
+	// Convert uplink interface list to set for O(1) lookup
+	uplinkSet := make(map[string]bool, len(uplinkInterfaces))
 	for _, iface := range uplinkInterfaces {
 		uplinkSet[iface] = true
 	}
@@ -178,25 +186,33 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 			info := stats[name]
 			var downloadRate, uploadRate, uploadAvg, downloadAvg, uploadPeak, downloadPeak float64
 
-			// Check if this is an uplink interface
+			// Convert RX/TX to Upload/Download based on interface type
+			//
+			// Uplink (WAN to ISP):
+			//   - TX = Upload to internet
+			//   - RX = Download from internet
+			//   - No swap needed (matches user expectation)
+			//
+			// Downlink (LAN/VLAN to users):
+			//   - TX = Download (router sends to user)
+			//   - RX = Upload (router receives from user)
+			//   - Swap needed for user perspective
 			if t.uplinkInterfaces[name] {
-				// Uplink (WAN to ISP): TX=Upload (to internet), RX=Download (from internet)
-				// This is the "normal" understanding, no swap needed
-				downloadRate = info.RxRate
+				// Uplink: no swap
 				uploadRate = info.TxRate
-				downloadAvg = info.RxAvg
+				downloadRate = info.RxRate
 				uploadAvg = info.TxAvg
-				downloadPeak = info.RxPeak
+				downloadAvg = info.RxAvg
 				uploadPeak = info.TxPeak
+				downloadPeak = info.RxPeak
 			} else {
-				// Downlink (to users/LAN): TX=Download (data to user), RX=Upload (data from user)
-				// From user perspective, needs swap
-				downloadRate = info.TxRate
+				// Downlink: swap TX/RX
 				uploadRate = info.RxRate
-				downloadAvg = info.TxAvg
+				downloadRate = info.TxRate
 				uploadAvg = info.RxAvg
-				downloadPeak = info.TxPeak
+				downloadAvg = info.TxAvg
 				uploadPeak = info.RxPeak
+				downloadPeak = info.TxPeak
 			}
 
 			// Format rates as numeric values only (no unit suffix)
@@ -253,12 +269,17 @@ func (t *TerminalOutput) Close() {
 	// Nothing to close for terminal output
 }
 
-// LogOutput handles log-style output
+// ============================================================================
+// Log Output (for services/daemons)
+// ============================================================================
+
+// LogOutput implements OutputWriter for structured logging
+// Suitable for running as a service or daemon
 type LogOutput struct {
-	rateUnit         string
-	rateScale        string
-	uplinkInterfaces map[string]bool // Set of uplink interface names
-	statsWindowSize  int             // Statistics window size in seconds (unused in log mode)
+	rateUnit         string          // "bps" or "Bps"
+	rateScale        string          // "auto", "k", "M", "G"
+	uplinkInterfaces map[string]bool // Set of uplink interface names for RX/TX swapping
+	statsWindowSize  int             // Statistics window size (unused in log mode)
 }
 
 // NewLogOutput creates a new log output handler

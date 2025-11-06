@@ -7,61 +7,61 @@ import (
 	"time"
 )
 
-// InterfaceStats represents interface traffic statistics
+// InterfaceStats represents raw interface traffic counters from Mikrotik
 type InterfaceStats struct {
-	Name   string
-	RxByte uint64
-	TxByte uint64
+	Name   string // Interface name (e.g., vlan2622, ether1)
+	RxByte uint64 // Total received bytes
+	TxByte uint64 // Total transmitted bytes
 }
 
-// InterfaceRate stores previous statistics for rate calculation
+// InterfaceRate maintains rate calculation state for an interface
+// Uses a ring buffer to track historical rates for statistics
 type InterfaceRate struct {
-	Name       string
-	LastRxByte uint64
-	LastTxByte uint64
-	LastTime   time.Time
+	Name       string    // Interface name
+	LastRxByte uint64    // Previous RX counter value
+	LastTxByte uint64    // Previous TX counter value
+	LastTime   time.Time // Timestamp of last update
 
-	// History for statistics window (ring buffer)
-	TxHistory    []float64 // TX rates (bytes/s)
-	RxHistory    []float64 // RX rates (bytes/s)
+	// Ring buffer for historical rates (bytes/second)
+	TxHistory    []float64 // TX rate history
+	RxHistory    []float64 // RX rate history
 	HistoryIndex int       // Current position in ring buffer
 	HistoryCount int       // Number of valid entries (0 to window size)
 }
 
 // GetInterfaceStats queries the Mikrotik router for interface statistics
+// Returns raw byte counters for specified interfaces
 func (c *MikrotikClient) GetInterfaceStats(interfaces []string, debug bool) ([]InterfaceStats, error) {
-	// Query with server-side filtering using Mikrotik API query syntax
-	// =stats              : get real-time statistics (live counters)
-	// =.proplist=         : only return specified properties (name, rx-byte, tx-byte)
-	// ?name=              : filter where name equals the value
-	// ?#|                 : OR operator (matches if any condition is true)
-	// This sends only the filtered results from Mikrotik, reducing network traffic
-
-	// Build command with dynamic interface list
+	// Build Mikrotik API command with server-side filtering
+	// This reduces network traffic by filtering on the router
+	//
+	// Command structure:
+	//   /interface/print       - Query interface data
+	//   =stats                 - Get real-time statistics (live counters)
+	//   =.proplist=...         - Only return specified properties
+	//   ?name=iface1           - Filter by interface name
+	//   ?name=iface2 ?#|       - OR operator (placed after each condition from 2nd onwards)
 	cmd := []string{
 		"/interface/print",
 		"=stats",
 		"=.proplist=name,rx-byte,tx-byte",
 	}
 
-	// Add filter for each interface
-	// Mikrotik API OR syntax: ?name=iface1 ?name=iface2 ?#| ?name=iface3 ?#|
-	// The OR operator ?#| comes AFTER each condition (starting from the second)
+	// Add interface filters with OR operators
+	// Pattern: ?name=iface1 ?name=iface2 ?#| ?name=iface3 ?#|
 	for i, iface := range interfaces {
 		cmd = append(cmd, "?name="+iface)
-		// Add OR operator after each interface starting from the second one
 		if i >= 1 {
-			cmd = append(cmd, "?#|")
+			cmd = append(cmd, "?#|") // OR operator after each interface from 2nd onwards
 		}
 	}
 
-	// Debug: print command for troubleshooting (if enabled)
 	if debug {
 		log.Printf("DEBUG: Mikrotik API command: %v", cmd)
 	}
 
-	err := c.sendCommand(cmd...)
-	if err != nil {
+	// Send command and read response
+	if err := c.sendCommand(cmd...); err != nil {
 		return nil, fmt.Errorf("sendCommand failed: %w", err)
 	}
 
@@ -70,22 +70,20 @@ func (c *MikrotikClient) GetInterfaceStats(interfaces []string, debug bool) ([]I
 		return nil, fmt.Errorf("readResponse failed: %w", err)
 	}
 
-	var stats []InterfaceStats
+	// Parse responses into InterfaceStats
+	stats := make([]InterfaceStats, 0, len(responses))
 	for _, resp := range responses {
 		name := resp["name"]
-		rxByteStr := resp["rx-byte"]
-		txByteStr := resp["tx-byte"]
-
 		if name == "" {
 			continue
 		}
 
-		rxByte, err := strconv.ParseUint(rxByteStr, 10, 64)
+		rxByte, err := strconv.ParseUint(resp["rx-byte"], 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse rx-byte for %s: %w", name, err)
 		}
 
-		txByte, err := strconv.ParseUint(txByteStr, 10, 64)
+		txByte, err := strconv.ParseUint(resp["tx-byte"], 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse tx-byte for %s: %w", name, err)
 		}
@@ -100,7 +98,8 @@ func (c *MikrotikClient) GetInterfaceStats(interfaces []string, debug bool) ([]I
 	return stats, nil
 }
 
-// FormatBytes converts bytes to human-readable format (auto scale)
+// FormatBytes converts bytes to human-readable format with auto-scaling (1024-based)
+// Deprecated: Use FormatRate with appropriate parameters instead
 func FormatBytes(bytes float64) string {
 	const unit = 1024
 	if bytes < unit {
@@ -114,83 +113,39 @@ func FormatBytes(bytes float64) string {
 	return fmt.Sprintf("%.2f %cB/s", bytes/div, "KMGTPE"[exp])
 }
 
-// formatCompact formats rate in compact form (max 10 chars)
-// Returns format like "1.2M" or "500k"
-func formatCompact(bytesPerSec float64, rateUnit string, rateScale string) string {
-	var value float64
-	var unit string
-
-	// Convert to bits or keep as bytes
-	if rateUnit == "bps" {
-		value = bytesPerSec * 8
-		unit = "b"
-	} else {
-		value = bytesPerSec
-		unit = "B"
-	}
-
-	// Apply scale
-	switch rateScale {
-	case "k":
-		value = value / 1000
-		return fmt.Sprintf("%.1f%ck", value, unit[0])
-	case "M":
-		value = value / 1000000
-		return fmt.Sprintf("%.1f%cM", value, unit[0])
-	case "G":
-		value = value / 1000000000
-		return fmt.Sprintf("%.1f%cG", value, unit[0])
-	case "auto":
-		// Auto scale with compact format
-		if value < 1000 {
-			return fmt.Sprintf("%.0f%c", value, unit[0])
-		} else if value < 1000000 {
-			return fmt.Sprintf("%.1f%ck", value/1000, unit[0])
-		} else if value < 1000000000 {
-			return fmt.Sprintf("%.1f%cM", value/1000000, unit[0])
-		} else {
-			return fmt.Sprintf("%.1f%cG", value/1000000000, unit[0])
-		}
-	default:
-		return fmt.Sprintf("%.0f%c", value, unit[0])
-	}
-}
-
-// FormatRate formats rate according to configuration
+// FormatRate formats traffic rate with unit suffix (for append/log modes)
+// Converts bytes/sec to configured unit and scale, returns formatted string with unit
 func FormatRate(bytesPerSec float64, rateUnit string, rateScale string) string {
 	var value float64
 	var unit string
 
 	// Convert to bits or keep as bytes
 	if rateUnit == "bps" {
-		value = bytesPerSec * 8 // Convert to bits
+		value = bytesPerSec * 8
 		unit = "bps"
 	} else {
 		value = bytesPerSec
 		unit = "B/s"
 	}
 
-	// Apply scale
+	// Apply scale and format
 	switch rateScale {
 	case "k":
-		value = value / 1000
-		return fmt.Sprintf("%7.2f %c%s", value, 'k', unit)
+		return fmt.Sprintf("%7.2f k%s", value/1000, unit)
 	case "M":
-		value = value / 1000000
-		return fmt.Sprintf("%7.2f %c%s", value, 'M', unit)
+		return fmt.Sprintf("%7.2f M%s", value/1000000, unit)
 	case "G":
-		value = value / 1000000000
-		return fmt.Sprintf("%7.2f %c%s", value, 'G', unit)
+		return fmt.Sprintf("%7.2f G%s", value/1000000000, unit)
 	case "auto":
-		// Auto scale
+		// Auto scale based on value magnitude
 		if value < 1000 {
 			return fmt.Sprintf("%7.2f %s", value, unit)
 		} else if value < 1000000 {
-			return fmt.Sprintf("%7.2f %c%s", value/1000, 'k', unit)
+			return fmt.Sprintf("%7.2f k%s", value/1000, unit)
 		} else if value < 1000000000 {
-			return fmt.Sprintf("%7.2f %c%s", value/1000000, 'M', unit)
+			return fmt.Sprintf("%7.2f M%s", value/1000000, unit)
 		} else {
-			return fmt.Sprintf("%7.2f %c%s", value/1000000000, 'G', unit)
+			return fmt.Sprintf("%7.2f G%s", value/1000000000, unit)
 		}
 	default:
 		return fmt.Sprintf("%.2f %s", value, unit)

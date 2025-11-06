@@ -5,20 +5,20 @@ import (
 	"time"
 )
 
-// Monitor monitors interface traffic and displays statistics
+// Monitor handles traffic monitoring and rate calculation
 type Monitor struct {
-	client          *MikrotikClient
-	rateMap         map[string]*InterfaceRate
-	interval        time.Duration
-	interfaces      []string
-	writer          OutputWriter
-	debug           bool
-	statsWindowSize int // Statistics window size in seconds
+	client          *MikrotikClient              // Mikrotik API client
+	rateMap         map[string]*InterfaceRate    // Interface rate tracking state
+	interval        time.Duration                // Monitoring interval (1 second)
+	interfaces      []string                     // List of interfaces to monitor
+	writer          OutputWriter                 // Output handler (terminal/log/metrics)
+	debug           bool                         // Enable debug logging
+	statsWindowSize int                          // Statistics window size in seconds
 }
 
-// NewMonitor creates a new traffic monitor
+// NewMonitor creates a new traffic monitor with appropriate output writer
 func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
-	// Create appropriate output writer based on config
+	// Select output writer based on configuration
 	var writer OutputWriter
 	if config.OutputMode == "log" {
 		writer = NewLogOutput(config.RateUnit, config.RateScale, config.UplinkInterfaces, config.StatsWindowSize)
@@ -38,19 +38,83 @@ func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
 	}
 }
 
-// Start starts the monitoring loop
+// Start begins the monitoring loop
+// Queries interfaces every second and calculates rates
 func (m *Monitor) Start() error {
-	// Use ticker to avoid missed seconds
+	// Use ticker for precise 1-second intervals
 	ticker := time.NewTicker(m.interval)
 	defer ticker.Stop()
 
-	// Get initial stats
+	// Initialize rate tracking with first stats
+	if err := m.initializeRates(); err != nil {
+		log.Printf("Warning: Failed to get initial stats: %v", err)
+	}
+
+	// Write output header
+	m.writer.WriteHeader()
+
+	// Main monitoring loop
+	for range ticker.C {
+		if err := m.updateAndDisplay(); err != nil {
+			log.Printf("Error in monitoring loop: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// initializeRates fetches initial statistics to establish baseline
+func (m *Monitor) initializeRates() error {
 	stats, err := m.client.GetInterfaceStats(m.interfaces, m.debug)
 	if err != nil {
-		log.Printf("Warning: Failed to get initial stats: %v", err)
-	} else {
-		now := time.Now()
-		for _, stat := range stats {
+		return err
+	}
+
+	now := time.Now()
+	for _, stat := range stats {
+		m.rateMap[stat.Name] = &InterfaceRate{
+			Name:       stat.Name,
+			LastRxByte: stat.RxByte,
+			LastTxByte: stat.TxByte,
+			LastTime:   now,
+			TxHistory:  make([]float64, m.statsWindowSize),
+			RxHistory:  make([]float64, m.statsWindowSize),
+		}
+	}
+
+	return nil
+}
+
+// updateAndDisplay fetches new stats, calculates rates, and displays results
+func (m *Monitor) updateAndDisplay() error {
+	stats, err := m.client.GetInterfaceStats(m.interfaces, m.debug)
+	if err != nil {
+		return err
+	}
+
+	if len(stats) == 0 {
+		return nil // No matching interfaces
+	}
+
+	now := time.Now()
+	rateInfoMap := m.calculateRates(stats, now)
+
+	// Write stats if we have any
+	if len(rateInfoMap) > 0 {
+		m.writer.WriteStats(now, rateInfoMap)
+	}
+
+	return nil
+}
+
+// calculateRates computes current rates and statistics from raw counters
+func (m *Monitor) calculateRates(stats []InterfaceStats, now time.Time) map[string]*RateInfo {
+	rateInfoMap := make(map[string]*RateInfo, len(stats))
+
+	for _, stat := range stats {
+		prev, exists := m.rateMap[stat.Name]
+		if !exists {
+			// Initialize new interface
 			m.rateMap[stat.Name] = &InterfaceRate{
 				Name:       stat.Name,
 				LastRxByte: stat.RxByte,
@@ -59,99 +123,67 @@ func (m *Monitor) Start() error {
 				TxHistory:  make([]float64, m.statsWindowSize),
 				RxHistory:  make([]float64, m.statsWindowSize),
 			}
-		}
-	}
-
-	// Write header
-	m.writer.WriteHeader()
-
-	// Display loop
-	for range ticker.C {
-		stats, err := m.client.GetInterfaceStats(m.interfaces, m.debug)
-		if err != nil {
-			log.Printf("Error getting stats: %v", err)
 			continue
 		}
 
-		if len(stats) == 0 {
-			// No matching interfaces found, skip silently
+		// Calculate time delta
+		timeDiff := now.Sub(prev.LastTime).Seconds()
+		if timeDiff <= 0 {
 			continue
 		}
 
-		now := time.Now()
+		// Calculate instantaneous rates (bytes/second)
+		rxRate := float64(stat.RxByte-prev.LastRxByte) / timeDiff
+		txRate := float64(stat.TxByte-prev.LastTxByte) / timeDiff
 
-		// Build rate info map
-		rateInfoMap := make(map[string]*RateInfo)
-
-		// Calculate rates for each interface
-		for _, stat := range stats {
-			if prev, ok := m.rateMap[stat.Name]; ok {
-				// Calculate time difference
-				timeDiff := now.Sub(prev.LastTime).Seconds()
-				if timeDiff > 0 {
-					// Calculate rates (bytes per second)
-					rxRate := float64(stat.RxByte-prev.LastRxByte) / timeDiff
-					txRate := float64(stat.TxByte-prev.LastTxByte) / timeDiff
-
-					// Update history (ring buffer) - store raw RX/TX rates
-					prev.TxHistory[prev.HistoryIndex] = txRate
-					prev.RxHistory[prev.HistoryIndex] = rxRate
-					prev.HistoryIndex = (prev.HistoryIndex + 1) % m.statsWindowSize
-					if prev.HistoryCount < m.statsWindowSize {
-						prev.HistoryCount++
-					}
-
-					// Calculate average and peak from history
-					var txSum, rxSum float64
-					txPeak := txRate
-					rxPeak := rxRate
-					for i := 0; i < prev.HistoryCount; i++ {
-						txSum += prev.TxHistory[i]
-						rxSum += prev.RxHistory[i]
-						if prev.TxHistory[i] > txPeak {
-							txPeak = prev.TxHistory[i]
-						}
-						if prev.RxHistory[i] > rxPeak {
-							rxPeak = prev.RxHistory[i]
-						}
-					}
-					txAvg := txSum / float64(prev.HistoryCount)
-					rxAvg := rxSum / float64(prev.HistoryCount)
-
-					// Update stored values for next calculation
-					prev.LastRxByte = stat.RxByte
-					prev.LastTxByte = stat.TxByte
-					prev.LastTime = now
-
-					// Add to rate info map - use RX/TX naming
-					rateInfoMap[stat.Name] = &RateInfo{
-						InterfaceName: stat.Name,
-						RxRate:        rxRate,
-						TxRate:        txRate,
-						RxAvg:         rxAvg, // RX average
-						TxAvg:         txAvg, // TX average
-						RxPeak:        rxPeak, // RX peak
-						TxPeak:        txPeak, // TX peak
-					}
-				}
-			} else {
-				// Initialize for new interface
-				m.rateMap[stat.Name] = &InterfaceRate{
-					Name:       stat.Name,
-					LastRxByte: stat.RxByte,
-					LastTxByte: stat.TxByte,
-					LastTime:   now,
-					TxHistory:  make([]float64, m.statsWindowSize),
-					RxHistory:  make([]float64, m.statsWindowSize),
-				}
-			}
+		// Update ring buffer with new rates
+		prev.TxHistory[prev.HistoryIndex] = txRate
+		prev.RxHistory[prev.HistoryIndex] = rxRate
+		prev.HistoryIndex = (prev.HistoryIndex + 1) % m.statsWindowSize
+		if prev.HistoryCount < m.statsWindowSize {
+			prev.HistoryCount++
 		}
 
-		// Write stats if we have any
-		if len(rateInfoMap) > 0 {
-			m.writer.WriteStats(now, rateInfoMap)
+		// Calculate statistics from history
+		txAvg, txPeak := m.calculateStats(prev.TxHistory, prev.HistoryCount)
+		rxAvg, rxPeak := m.calculateStats(prev.RxHistory, prev.HistoryCount)
+
+		// Update baseline for next iteration
+		prev.LastRxByte = stat.RxByte
+		prev.LastTxByte = stat.TxByte
+		prev.LastTime = now
+
+		// Store calculated rate info
+		rateInfoMap[stat.Name] = &RateInfo{
+			InterfaceName: stat.Name,
+			RxRate:        rxRate,
+			TxRate:        txRate,
+			RxAvg:         rxAvg,
+			TxAvg:         txAvg,
+			RxPeak:        rxPeak,
+			TxPeak:        txPeak,
 		}
 	}
 
-	return nil
+	return rateInfoMap
+}
+
+// calculateStats computes average and peak from a history buffer
+func (m *Monitor) calculateStats(history []float64, count int) (avg float64, peak float64) {
+	if count == 0 {
+		return 0, 0
+	}
+
+	var sum float64
+	peak = history[0]
+
+	for i := 0; i < count; i++ {
+		sum += history[i]
+		if history[i] > peak {
+			peak = history[i]
+		}
+	}
+
+	avg = sum / float64(count)
+	return avg, peak
 }

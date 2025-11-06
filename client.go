@@ -11,9 +11,16 @@ import (
 	"time"
 )
 
+// Mikrotik API Client
+// Implements the Mikrotik RouterOS API protocol
+// Reference: https://help.mikrotik.com/docs/display/ROS/API
+//
+// Protocol uses length-encoded words with MD5 challenge-response authentication
+// Supports both old API (with challenge) and new API (direct password)
+
 // MikrotikClient represents a connection to a Mikrotik router
 type MikrotikClient struct {
-	conn net.Conn
+	conn net.Conn // TCP connection to Mikrotik API
 }
 
 // NewMikrotikClient creates a new Mikrotik API client and performs login
