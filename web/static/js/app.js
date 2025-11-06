@@ -1,8 +1,12 @@
-// WebSocket connection
+// ============================================================================
+// WebSocket Real-time Connection
+// ============================================================================
+
 let ws;
 let reconnectInterval = 3000;
 let charts = {};
 let chartData = {};
+let availableInterfaces = new Set();
 
 // Chart configuration
 const MAX_DATA_POINTS = 60; // Show last 60 seconds
@@ -50,6 +54,10 @@ function updateStatus(connected) {
         statusText.textContent = 'Reconnecting...';
     }
 }
+
+// ============================================================================
+// Real-time Display Functions
+// ============================================================================
 
 function formatBytes(bytes) {
     const mbps = (bytes * 8 / 1000000).toFixed(2);
@@ -219,6 +227,9 @@ function updateDisplay(data) {
     const container = document.getElementById('interfaces');
 
     for (const [name, stats] of Object.entries(data.interfaces)) {
+        // Track available interfaces
+        availableInterfaces.add(name);
+
         let card = document.getElementById('card-' + name);
 
         // Create card if it doesn't exist
@@ -244,6 +255,9 @@ function updateDisplay(data) {
         // Update chart
         updateChart(name, data.timestamp, stats.upload_rate, stats.download_rate);
     }
+
+    // Update interface selector in history panel
+    updateInterfaceSelector();
 }
 
 function createInterfaceCard(name) {
@@ -255,6 +269,7 @@ function createInterfaceCard(name) {
         <div class="interface-header">
             <div class="interface-name">${name}</div>
             <div class="interface-stats">
+                <button class="history-btn" onclick="openHistoryPanel('${name}')">📊 History</button>
                 <div class="stat-badge upload">
                     <div class="stat-label">↑ Upload</div>
                     <div class="stat-value current-upload">0 Mbps</div>
@@ -292,6 +307,46 @@ function createInterfaceCard(name) {
 
     return card;
 }
+
+// ============================================================================
+// Historical Data Functions
+// ============================================================================
+
+function updateInterfaceSelector() {
+    const select = document.getElementById('historyInterface');
+    const currentValue = select.value;
+
+    // Clear and repopulate
+    select.innerHTML = '';
+    availableInterfaces.forEach(iface => {
+        const option = document.createElement('option');
+        option.value = iface;
+        option.textContent = iface;
+        select.appendChild(option);
+    });
+
+    // Restore selection if possible
+    if (currentValue && availableInterfaces.has(currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+function openHistoryPanel(interfaceName) {
+    // Open history page in new window
+    const width = 1200;
+    const height = 800;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    const url = `/history.html?interface=${encodeURIComponent(interfaceName)}`;
+    const features = `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`;
+
+    window.open(url, `history_${interfaceName}`, features);
+}
+
+// ============================================================================
+// Initialize
+// ============================================================================
 
 // Start connection when page loads
 connect();

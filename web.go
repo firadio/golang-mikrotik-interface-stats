@@ -3,10 +3,12 @@ package main
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,6 +28,7 @@ type WebServer struct {
 	config           *WebConfig
 	uplinkInterfaces map[string]bool
 	server           *http.Server
+	vmClient         *VMClient // For historical data queries
 
 	// WebSocket client management
 	clients   map[*websocket.Conn]bool
@@ -65,7 +68,7 @@ func getWebFS() (http.FileSystem, bool) {
 }
 
 // NewWebServer creates a new web server
-func NewWebServer(config *WebConfig, uplinkInterfaces []string) *WebServer {
+func NewWebServer(config *WebConfig, uplinkInterfaces []string, vmClient *VMClient) *WebServer {
 	log.Printf("[Web] Web server initialized (addr: %s)", config.ListenAddr)
 
 	// Convert uplink interface list to set
@@ -77,6 +80,7 @@ func NewWebServer(config *WebConfig, uplinkInterfaces []string) *WebServer {
 	ws := &WebServer{
 		config:           config,
 		uplinkInterfaces: uplinkSet,
+		vmClient:         vmClient,
 		clients:          make(map[*websocket.Conn]bool),
 		latestStats:      make(map[string]*RateInfo),
 		upgrader: websocket.Upgrader{
@@ -110,6 +114,7 @@ func NewWebServer(config *WebConfig, uplinkInterfaces []string) *WebServer {
 
 	if config.EnableAPI {
 		mux.HandleFunc("/api/current", ws.handleCurrentStats)
+		mux.HandleFunc("/api/history", ws.handleHistoryQuery)
 	}
 
 	if config.EnableRealtime {
@@ -305,5 +310,113 @@ func (w *WebServer) convertToDisplayFormat(timestamp time.Time, stats map[string
 	return map[string]interface{}{
 		"timestamp":  timestamp.Format(time.RFC3339),
 		"interfaces": interfaces,
+	}
+}
+
+// handleHistoryQuery returns historical statistics from VictoriaMetrics
+func (w *WebServer) handleHistoryQuery(rw http.ResponseWriter, r *http.Request) {
+	// Check if VM is enabled
+	if w.vmClient == nil {
+		http.Error(rw, "VictoriaMetrics not enabled", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Parse query parameters
+	query := r.URL.Query()
+	interfaceName := query.Get("interface")
+	startStr := query.Get("start")
+	endStr := query.Get("end")
+	interval := query.Get("interval")
+
+	// Validate required parameters
+	if interfaceName == "" {
+		http.Error(rw, "Missing 'interface' parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Parse time range
+	var start, end time.Time
+	var err error
+
+	if startStr == "" {
+		// Default to last 24 hours
+		end = time.Now()
+		start = end.Add(-24 * time.Hour)
+	} else {
+		// Try parsing as Unix timestamp (seconds)
+		if startInt, err2 := strconv.ParseInt(startStr, 10, 64); err2 == nil {
+			start = time.Unix(startInt, 0)
+		} else {
+			// Try parsing as RFC3339
+			start, err = time.Parse(time.RFC3339, startStr)
+			if err != nil {
+				http.Error(rw, "Invalid 'start' time format", http.StatusBadRequest)
+				return
+			}
+		}
+
+		if endStr == "" {
+			end = time.Now()
+		} else {
+			if endInt, err2 := strconv.ParseInt(endStr, 10, 64); err2 == nil {
+				end = time.Unix(endInt, 0)
+			} else {
+				end, err = time.Parse(time.RFC3339, endStr)
+				if err != nil {
+					http.Error(rw, "Invalid 'end' time format", http.StatusBadRequest)
+					return
+				}
+			}
+		}
+	}
+
+	// Validate time range
+	if start.After(end) {
+		http.Error(rw, "Start time must be before end time", http.StatusBadRequest)
+		return
+	}
+
+	// Default interval to auto
+	if interval == "" {
+		interval = "auto"
+	}
+
+	// Query VictoriaMetrics
+	resp, err := w.vmClient.QueryHistory(HistoryQueryParams{
+		Interface: interfaceName,
+		Start:     start,
+		End:       end,
+		Interval:  interval,
+	})
+
+	if err != nil {
+		log.Printf("[Web] History query error: %v", err)
+		http.Error(rw, fmt.Sprintf("Query failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to display format (swap RX/TX if needed)
+	w.convertHistoryToDisplayFormat(resp)
+
+	// Return JSON response
+	rw.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(rw).Encode(resp)
+}
+
+// convertHistoryToDisplayFormat converts RX/TX to Upload/Download for history data
+func (w *WebServer) convertHistoryToDisplayFormat(resp *HistoryResponse) {
+	isUplink := w.uplinkInterfaces[resp.Interface]
+
+	for i := range resp.DataPoints {
+		dp := &resp.DataPoints[i]
+
+		if isUplink {
+			// Uplink: TX=Upload, RX=Download (no swap)
+			// Already correct
+		} else {
+			// Downlink: TX=Download, RX=Upload (need swap)
+			dp.UploadAvg, dp.DownloadAvg = dp.DownloadAvg, dp.UploadAvg
+			dp.UploadPeak, dp.DownloadPeak = dp.DownloadPeak, dp.UploadPeak
+		}
 	}
 }

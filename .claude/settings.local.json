@@ -13,7 +13,9 @@
       "Bash(timeout 6 go run:*)",
       "Bash(go get:*)",
       "Bash(tree:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(powershell:*)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []

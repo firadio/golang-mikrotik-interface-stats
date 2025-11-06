@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Data - Mikrotik Interface Monitor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Historical Data</h1>
+            <div class="header-actions">
+                <button class="close-btn" onclick="window.close()" title="Close window">✕</button>
+            </div>
+        </header>
+
+        <!-- History Query Panel -->
+        <div class="history-panel" style="display: block;">
+            <div class="history-controls">
+                <div class="control-group">
+                    <label>Interface:</label>
+                    <select id="historyInterface" class="history-select">
+                        <!-- Will be populated by URL parameter -->
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Time Range:</label>
+                    <div class="time-range-buttons">
+                        <button class="time-btn" data-range="1h">1 Hour</button>
+                        <button class="time-btn" data-range="6h">6 Hours</button>
+                        <button class="time-btn active" data-range="24h">24 Hours</button>
+                        <button class="time-btn" data-range="7d">7 Days</button>
+                        <button class="time-btn" data-range="30d">30 Days</button>
+                        <button class="time-btn" data-range="custom">Custom</button>
+                    </div>
+                </div>
+
+                <div id="customRange" class="control-group custom-range" style="display: none;">
+                    <div class="date-inputs">
+                        <div>
+                            <label>Start:</label>
+                            <input type="datetime-local" id="customStart" class="date-input">
+                        </div>
+                        <div>
+                            <label>End:</label>
+                            <input type="datetime-local" id="customEnd" class="date-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Interval:</label>
+                    <select id="historyInterval" class="history-select">
+                        <option value="auto" selected>Auto</option>
+                        <option value="10s">10 Seconds</option>
+                        <option value="300s">5 Minutes</option>
+                    </select>
+                </div>
+
+                <button id="queryBtn" class="query-btn" onclick="loadHistoricalData()">
+                    <span class="btn-text">Load Data</span>
+                    <span class="loading-spinner" style="display: none;">⏳</span>
+                </button>
+            </div>
+
+            <div class="history-chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+
+            <div id="historyStats" class="history-stats"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/history.js"></script>
+</body>
+</html>

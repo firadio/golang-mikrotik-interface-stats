@@ -17,7 +17,9 @@ Monitor Mikrotik interface traffic statistics in real-time.
 - ✅ Precise timing using time.Ticker (no missed seconds)
 - ✅ Real-time monitoring with 1-second intervals
 - ✅ Modular output system for easy extension
-- 🔜 Export data to VictoriaMetrics (planned)
+- ✅ **Web interface with real-time Chart.js graphs**
+- ✅ **Historical data storage and query via VictoriaMetrics**
+- ✅ **Embedded static files** (single-file distribution with developer mode support)
 
 ## Configuration
 
@@ -49,6 +51,18 @@ OUTPUT_MODE=terminal  # or "log"
 
 # Debug mode (optional)
 DEBUG=false  # or "true" to see API commands
+
+# Web interface (optional)
+WEB_ENABLED=true
+WEB_LISTEN_ADDR=:8080
+
+# VictoriaMetrics (optional)
+VM_ENABLED=true
+VM_URL=http://localhost:8428
+VM_SHORT_INTERVAL=10s
+VM_LONG_INTERVAL=300s
+VM_ENABLE_SHORT=true
+VM_ENABLE_LONG=true
 ```
 
 **Configuration Options:**
@@ -92,6 +106,38 @@ DEBUG=false  # or "true" to see API commands
   - `false` (default) - Normal operation
   - `true` or `1` - Print Mikrotik API commands being sent (useful for troubleshooting)
 
+- **WEB_ENABLED**: Enable web interface
+  - `true` - Enable real-time web dashboard with Chart.js graphs
+  - `false` (default) - Disable web interface
+
+- **WEB_LISTEN_ADDR**: Web server listen address
+  - Default: `:8080` - Listen on all interfaces, port 8080
+  - Example: `localhost:8080` - Only accessible from localhost
+
+- **VM_ENABLED**: Enable VictoriaMetrics integration
+  - `true` - Enable metrics aggregation and push to VictoriaMetrics
+  - `false` (default) - Disable VictoriaMetrics integration
+
+- **VM_URL**: VictoriaMetrics server URL
+  - Default: `http://localhost:8428`
+  - Must include protocol (http/https)
+
+- **VM_SHORT_INTERVAL**: Short-term aggregation interval
+  - Default: `10s` - 10-second windows for detailed monitoring
+  - Suitable for <1 hour time ranges
+
+- **VM_LONG_INTERVAL**: Long-term aggregation interval
+  - Default: `300s` (5 minutes) - 5-minute windows for historical data
+  - Suitable for >1 hour time ranges
+
+- **VM_ENABLE_SHORT**: Enable short-term aggregation
+  - `true` (default) - Enable 10-second aggregation
+  - `false` - Disable short-term metrics
+
+- **VM_ENABLE_LONG**: Enable long-term aggregation
+  - `true` (default) - Enable 5-minute aggregation
+  - `false` - Disable long-term metrics
+
 See `.env.example` for reference.
 
 ### Windows Terminal Support
@@ -124,6 +170,36 @@ Build and run:
 go build -o mikrotik-stats
 ./mikrotik-stats
 ```
+
+### Web Interface
+
+When web interface is enabled (`WEB_ENABLED=true`), access the dashboard at:
+```
+http://localhost:8080
+```
+
+**Features:**
+- ✅ Real-time monitoring with 60-second rolling charts
+- ✅ WebSocket connection for live updates (1-second refresh)
+- ✅ Historical data query interface
+- ✅ Interactive Chart.js graphs with zoom/pan
+- ✅ Time range selector (1h, 6h, 24h, 7d, 30d, custom)
+- ✅ Per-interface statistics (Average + Peak rates)
+- ✅ Modern dark theme with responsive design
+- ✅ Automatic reconnection on disconnect
+
+**Historical Data:**
+Click the "📊 History" button on any interface card to:
+- View historical data from VictoriaMetrics
+- Select time ranges (1 hour to 30 days)
+- Choose aggregation interval (auto, 10s, 5min)
+- See 4 metrics: Upload/Download Average and Peak
+- Export-ready data visualization
+
+**Developer Mode:**
+- If `web/` directory exists: Uses local files (hot-reload)
+- Otherwise: Uses embedded files from binary
+- No separate static file distribution needed
 
 ## Output Examples
 
@@ -199,21 +275,32 @@ Press Ctrl+C to stop
 
 ```
 .
-├── main.go              # Program entry point
-├── config.go            # Configuration loading
-├── client.go            # Mikrotik API client
-├── stats.go             # Statistics data structures and formatting
-├── monitor.go           # Monitoring logic
-├── output.go            # Output abstraction (terminal/log modes)
-├── terminal_windows.go  # Windows ANSI support (build tag: windows)
-├── terminal_unix.go     # Unix ANSI stub (build tag: !windows)
-├── go.mod               # Go module configuration
-├── .env                 # Environment configuration
-└── README.md            # Documentation
+├── main.go                 # Program entry point
+├── config.go               # Configuration loading
+├── client.go               # Mikrotik API client
+├── stats.go                # Statistics data structures and formatting
+├── monitor.go              # Monitoring logic
+├── output.go               # Output abstraction (terminal/log modes)
+├── web.go                  # Web server with WebSocket + embedded files
+├── vm.go                   # VictoriaMetrics client and aggregation
+├── terminal_windows.go     # Windows ANSI support (build tag: windows)
+├── terminal_unix.go        # Unix ANSI stub (build tag: !windows)
+├── web/                    # Web interface files (embedded)
+│   ├── index.html          # Main HTML structure
+│   └── static/
+│       ├── css/
+│       │   └── style.css   # Dark theme styles
+│       └── js/
+│           └── app.js      # Real-time + historical data logic
+├── go.mod                  # Go module configuration
+├── .env                    # Environment configuration
+├── DEPLOYMENT.md           # Deployment guide
+└── README.md               # Documentation
 ```
 
 ## Implementation Details
 
+### Core Monitoring
 - Uses Mikrotik API protocol directly (no external dependencies)
 - Implements proper MD5 challenge-response authentication
 - Server-side filtering using Mikrotik API query syntax (reduces network overhead)
@@ -221,16 +308,41 @@ Press Ctrl+C to stop
 - Uses `time.Ticker` for accurate 1-second intervals
 - Configurable interface list via environment variables
 - **Automatically enables ANSI support on Windows** via Windows API (no manual setup needed)
+
+### Output System
 - Modular output system with OutputWriter interface:
   - TerminalOutput: Interactive display (refresh/append modes)
   - LogOutput: Service-friendly structured logging
+  - WebServer: Real-time WebSocket dashboard
 - Configurable rate units (bits vs bytes) and scales (auto/fixed)
 - Fixed-scale formatting with decimal alignment for easy reading
 - **Efficient cursor control**: Uses ANSI escape sequences to move cursor instead of clearing screen
   - Reduces flicker and improves visual stability
   - Interfaces always displayed in alphabetical order (no jumping)
-  - `\033[H` - move cursor to home position
-  - `\033[J` - clear from cursor to end of screen
+
+### Web Interface
+- **Embedded static files**: Go 1.16+ `//go:embed` directive
+- **Developer mode**: Auto-detects `web/` directory for hot-reload
+- **Production mode**: Uses embedded files from binary (9.5MB total)
+- **WebSocket**: Real-time push of interface statistics
+- **Chart.js 4.4.0**: Modern, responsive graphs with time axis
+- **Dark theme**: Slate color scheme optimized for monitoring
+
+### VictoriaMetrics Integration
+- **Fixed time-boundary aggregation**: Windows aligned to intervals (not sliding)
+- **Dual-interval support**: 10s (short-term) + 300s (long-term)
+- **Prometheus format**: Compatible with standard VM import API
+- **Retry logic**: Automatic retry with exponential backoff
+- **Query API**: PromQL-based historical data retrieval
+- **Auto-interval selection**: Chooses appropriate granularity based on time range
+- **Metrics exported**:
+  - `mikrotik_interface_rx_rate_avg{interface,interval}` - Average download rate
+  - `mikrotik_interface_rx_rate_peak{interface,interval}` - Peak download rate
+  - `mikrotik_interface_rx_rate_min{interface,interval}` - Minimum download rate
+  - `mikrotik_interface_tx_rate_avg{interface,interval}` - Average upload rate
+  - `mikrotik_interface_tx_rate_peak{interface,interval}` - Peak upload rate
+  - `mikrotik_interface_tx_rate_min{interface,interval}` - Minimum upload rate
+  - `mikrotik_interface_sample_count{interface,interval}` - Number of samples
 
 ## API Query Format
 

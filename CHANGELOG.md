@@ -49,11 +49,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Stats caching for immediate delivery to new connections
   - Easy to extend and customize
 
-- **VictoriaMetrics Integration** (VM_ENABLED) - Stub implementation
-  - Time window aggregator (planned)
-  - Short-term aggregation (10s intervals)
-  - Long-term aggregation (5m intervals)
-  - Push metrics to VictoriaMetrics (planned)
+- **VictoriaMetrics Integration** (VM_ENABLED) - Complete implementation
+  - **Fixed time-boundary aggregation** (windows aligned to intervals)
+  - **Dual-interval support**: 10s (short-term) + 300s (long-term)
+  - **Prometheus format metrics export** via HTTP POST
+  - **Retry logic** with exponential backoff
+  - **PromQL-based query API** for historical data retrieval
+  - **Auto-interval selection**: Chooses appropriate granularity based on time range
+  - **Metrics exported**:
+    - `mikrotik_interface_rx_rate_avg{interface,interval}` - Average download rate
+    - `mikrotik_interface_rx_rate_peak{interface,interval}` - Peak download rate
+    - `mikrotik_interface_rx_rate_min{interface,interval}` - Minimum download rate
+    - `mikrotik_interface_tx_rate_avg{interface,interval}` - Average upload rate
+    - `mikrotik_interface_tx_rate_peak{interface,interval}` - Peak upload rate
+    - `mikrotik_interface_tx_rate_min{interface,interval}` - Minimum upload rate
+    - `mikrotik_interface_sample_count{interface,interval}` - Number of samples in window
+  - **Thread-safe aggregation** with sync.Mutex for concurrent access
+
+- **Historical Data Query System**
+  - **Web API endpoint**: `/api/history?interface=X&start=T1&end=T2&interval=auto`
+  - **Interactive query interface** in web UI
+  - **Pre-defined time ranges**: 1h, 6h, 24h, 7d, 30d
+  - **Custom date/time picker** for flexible queries
+  - **Auto-interval selection**: 10s for <1h, 300s for >1h
+  - **Chart.js time axis** with date-fns adapter for proper date formatting
+  - **4 metrics display**: Upload/Download Average and Peak
+  - **Statistical summary cards**: Overall average, peak, data points, interval
+  - **History button** on each interface card for quick access
 
 - Configuration management
   - Environment variable support

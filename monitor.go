@@ -52,12 +52,7 @@ func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
 		m.logWriter = NewStructuredLogger(config.Log, config.UplinkInterfaces)
 	}
 
-	// Initialize web server if enabled
-	if config.Web != nil {
-		m.webServer = NewWebServer(config.Web, config.UplinkInterfaces)
-	}
-
-	// Initialize VictoriaMetrics if enabled
+	// Initialize VictoriaMetrics if enabled (BEFORE web server to ensure vmClient is available)
 	if config.VictoriaMetrics != nil {
 		m.vmClient = NewVMClient(config.VictoriaMetrics)
 		m.aggregator = NewTimeWindowAggregator(
@@ -66,6 +61,11 @@ func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
 			config.VictoriaMetrics.EnableShort,
 			config.VictoriaMetrics.EnableLong,
 		)
+	}
+
+	// Initialize web server if enabled (AFTER VictoriaMetrics to get vmClient)
+	if config.Web != nil {
+		m.webServer = NewWebServer(config.Web, config.UplinkInterfaces, m.vmClient)
 	}
 
 	return m
@@ -175,8 +175,8 @@ func (m *Monitor) updateAndDisplay() error {
 
 	// 4. VictoriaMetrics aggregation (if enabled)
 	if m.aggregator != nil {
-		for _, rateInfo := range rateInfoMap {
-			m.aggregator.AddSample(now, rateInfo)
+		for ifaceName, rateInfo := range rateInfoMap {
+			m.aggregator.AddSample(now, ifaceName, rateInfo.RxRate, rateInfo.TxRate)
 		}
 
 		// Check for completed windows and send to VM
