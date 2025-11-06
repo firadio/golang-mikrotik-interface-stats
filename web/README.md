@@ -2,6 +2,24 @@
 
 This directory contains the static files for the web monitoring interface.
 
+## 📦 Embedded vs Local Files
+
+The web interface supports **dual-mode operation**:
+
+### Production Mode (Embedded)
+- Static files are **embedded into the binary** at compile time
+- **Single executable** - no need to distribute the `web/` directory
+- Files served directly from memory (faster)
+- To use: Simply **delete or move the `web/` directory** before running
+
+### Developer Mode (Local Files)
+- If `web/` directory exists at runtime, files are loaded from disk
+- **Hot-reload enabled** - changes take effect immediately (just refresh browser)
+- Perfect for frontend development and testing
+- To use: Keep the `web/` directory in the same location as the executable
+
+**The program automatically detects which mode to use at startup.**
+
 ## Directory Structure
 
 ```
@@ -96,13 +114,38 @@ const CHART_COLORS = {
 };
 ```
 
-## Development
+## Development Workflow
+
+### Quick Start
+
+1. **Keep `web/` directory present** during development
+2. **Start the program** - it will detect developer mode automatically
+3. **Edit files** in `web/` directory
+4. **Refresh browser** - changes appear immediately (no rebuild needed!)
+
+Example log output in developer mode:
+```
+[Web] Developer mode: Using local files from 'web/' directory
+[Web] 💡 Tip: Remove 'web/' directory to test production mode (embedded files)
+[Web] Static files: Hot-reload enabled (changes take effect immediately)
+```
+
+### Building for Production
+
+```bash
+# Compile with embedded files
+go build -o mikrotik-stats.exe
+
+# Distribute only the exe (web/ directory not needed)
+# Users can delete/move web/ directory - the program will work from embedded files
+```
 
 ### Adding New Features
 
 1. **Add CSS**: Edit `static/css/style.css` (uses CSS custom properties for easy theming)
 2. **Add JavaScript**: Edit `static/js/app.js` or create new files
 3. **Modify HTML**: Edit `index.html`
+4. **Test changes**: Just refresh browser (no rebuild needed in developer mode)
 
 ### Adding Icons/Images
 

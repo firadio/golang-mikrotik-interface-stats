@@ -30,7 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - HTTP server with route management
   - WebSocket real-time push with auto-reconnect
   - REST API for current statistics (/api/current)
-  - Static file serving from `web/` directory
+  - **Dual-mode static file serving** (Go 1.16+ embed)
+    - Production mode: Files embedded in binary (single exe distribution)
+    - Developer mode: Hot-reload from local `web/` directory (instant changes)
+    - Automatic mode detection at startup
   - Modular frontend (HTML/CSS/JS separated)
   - **Real-time line charts** powered by Chart.js 4.4.0
     - Smooth 60-second historical view

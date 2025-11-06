@@ -12,7 +12,8 @@
       "Bash(export DISPLAY_MODE=append)",
       "Bash(timeout 6 go run:*)",
       "Bash(go get:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

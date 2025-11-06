@@ -1,9 +1,12 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
+	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -13,6 +16,10 @@ import (
 // ============================================================================
 // Web Server Implementation
 // ============================================================================
+
+// Embed static files into binary (production mode)
+//go:embed web
+var embeddedFS embed.FS
 
 // WebServer handles HTTP/WebSocket server for real-time monitoring
 type WebServer struct {
@@ -29,6 +36,32 @@ type WebServer struct {
 	latestStats   map[string]*RateInfo
 	latestTime    time.Time
 	latestStatsMu sync.RWMutex
+}
+
+// getWebFS returns the appropriate file system (local or embedded)
+// Developer mode: If "web" directory exists, use local files for hot-reload
+// Production mode: Use embedded files from binary
+func getWebFS() (http.FileSystem, bool) {
+	const webDir = "web"
+
+	// Check if web directory exists (developer mode)
+	if stat, err := os.Stat(webDir); err == nil && stat.IsDir() {
+		log.Printf("[Web] Developer mode: Using local files from '%s/' directory", webDir)
+		log.Printf("[Web] 💡 Tip: Remove '%s/' directory to test production mode (embedded files)", webDir)
+		return http.Dir(webDir), true
+	}
+
+	// Production mode: use embedded files
+	log.Println("[Web] Production mode: Using embedded files from binary")
+
+	// Strip "web" prefix from embedded FS
+	webContent, err := fs.Sub(embeddedFS, webDir)
+	if err != nil {
+		log.Printf("[Web] Warning: Failed to access embedded files: %v", err)
+		return nil, false
+	}
+
+	return http.FS(webContent), false
 }
 
 // NewWebServer creates a new web server
@@ -58,10 +91,21 @@ func NewWebServer(config *WebConfig, uplinkInterfaces []string) *WebServer {
 
 	// Register routes based on enabled features
 	if config.EnableStatic {
-		// Serve static files from web/ directory
-		fs := http.FileServer(http.Dir("web"))
-		mux.Handle("/", fs)
-		mux.Handle("/static/", fs)
+		// Get appropriate file system (local or embedded)
+		webFS, isDev := getWebFS()
+		if webFS != nil {
+			fileServer := http.FileServer(webFS)
+			mux.Handle("/", fileServer)
+
+			// Log mode for clarity
+			if isDev {
+				log.Println("[Web] Static files: Hot-reload enabled (changes take effect immediately)")
+			} else {
+				log.Println("[Web] Static files: Serving from embedded binary")
+			}
+		} else {
+			log.Println("[Web] ERROR: Failed to initialize file system")
+		}
 	}
 
 	if config.EnableAPI {
