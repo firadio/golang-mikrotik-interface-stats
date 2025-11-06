@@ -58,7 +58,10 @@ func NewWebServer(config *WebConfig, uplinkInterfaces []string) *WebServer {
 
 	// Register routes based on enabled features
 	if config.EnableStatic {
-		mux.HandleFunc("/", ws.handleIndex)
+		// Serve static files from web/ directory
+		fs := http.FileServer(http.Dir("web"))
+		mux.Handle("/", fs)
+		mux.Handle("/static/", fs)
 	}
 
 	if config.EnableAPI {
@@ -150,18 +153,6 @@ func (w *WebServer) BroadcastStats(timestamp time.Time, stats map[string]*RateIn
 // ============================================================================
 // HTTP Handlers
 // ============================================================================
-
-// handleIndex serves the main web page
-func (w *WebServer) handleIndex(rw http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(rw, r)
-		return
-	}
-
-	html := w.generateIndexHTML()
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-	rw.Write([]byte(html))
-}
 
 // handleCurrentStats returns current statistics as JSON
 func (w *WebServer) handleCurrentStats(rw http.ResponseWriter, r *http.Request) {
@@ -271,173 +262,4 @@ func (w *WebServer) convertToDisplayFormat(timestamp time.Time, stats map[string
 		"timestamp":  timestamp.Format(time.RFC3339),
 		"interfaces": interfaces,
 	}
-}
-
-// generateIndexHTML generates a simple HTML page
-func (w *WebServer) generateIndexHTML() string {
-	return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mikrotik Interface Monitor</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #00d9ff;
-        }
-        .status {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #16213e;
-            border-radius: 8px;
-        }
-        .status.connected { color: #00ff88; }
-        .status.disconnected { color: #ff4444; }
-        .interfaces {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-        }
-        .interface-card {
-            background: #16213e;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-        .interface-name {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #00d9ff;
-        }
-        .metric {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #0f3460;
-        }
-        .metric:last-child {
-            border-bottom: none;
-        }
-        .metric-label {
-            color: #aaa;
-        }
-        .metric-value {
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        .upload { color: #ff6b6b; }
-        .download { color: #4ecdc4; }
-        .avg { color: #95e1d3; }
-        .peak { color: #f38181; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🌐 Mikrotik Interface Monitor</h1>
-        <div id="status" class="status disconnected">Connecting...</div>
-        <div id="timestamp" style="text-align: center; margin-bottom: 20px; color: #888;"></div>
-        <div id="interfaces" class="interfaces"></div>
-    </div>
-
-    <script>
-        let ws;
-        let reconnectInterval = 3000;
-
-        function connect() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = protocol + '//' + window.location.host + '/api/realtime';
-
-            ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => {
-                document.getElementById('status').textContent = '✓ Connected';
-                document.getElementById('status').className = 'status connected';
-            };
-
-            ws.onclose = () => {
-                document.getElementById('status').textContent = '✗ Disconnected - Reconnecting...';
-                document.getElementById('status').className = 'status disconnected';
-                setTimeout(connect, reconnectInterval);
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-            };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                updateDisplay(data);
-            };
-        }
-
-        function formatBytes(bytes) {
-            const mbps = (bytes * 8 / 1000000).toFixed(2);
-            return mbps + ' Mbps';
-        }
-
-        function updateDisplay(data) {
-            // Update timestamp
-            const time = new Date(data.timestamp).toLocaleString();
-            document.getElementById('timestamp').textContent = 'Last update: ' + time;
-
-            // Update interfaces
-            const container = document.getElementById('interfaces');
-            container.innerHTML = '';
-
-            for (const [name, stats] of Object.entries(data.interfaces)) {
-                const card = document.createElement('div');
-                card.className = 'interface-card';
-
-                card.innerHTML = ` + "`" + `
-                    <div class="interface-name">${name}</div>
-                    <div class="metric">
-                        <span class="metric-label">↑ Upload (current)</span>
-                        <span class="metric-value upload">${formatBytes(stats.upload_rate)}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">↓ Download (current)</span>
-                        <span class="metric-value download">${formatBytes(stats.download_rate)}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">↑ Upload (avg)</span>
-                        <span class="metric-value avg">${formatBytes(stats.upload_avg)}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">↓ Download (avg)</span>
-                        <span class="metric-value avg">${formatBytes(stats.download_avg)}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">↑ Upload (peak)</span>
-                        <span class="metric-value peak">${formatBytes(stats.upload_peak)}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">↓ Download (peak)</span>
-                        <span class="metric-value peak">${formatBytes(stats.download_peak)}</span>
-                    </div>
-                ` + "`" + `;
-
-                container.appendChild(card);
-            }
-        }
-
-        // Start connection
-        connect();
-    </script>
-</body>
-</html>`
 }

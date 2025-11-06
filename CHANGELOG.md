@@ -30,9 +30,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - HTTP server with route management
   - WebSocket real-time push with auto-reconnect
   - REST API for current statistics (/api/current)
-  - Embedded dark-theme responsive web UI
+  - Static file serving from `web/` directory
+  - Modular frontend (HTML/CSS/JS separated)
+  - **Real-time line charts** powered by Chart.js 4.4.0
+    - Smooth 60-second historical view
+    - Upload/Download dual-line visualization
+    - Gradient fills and hover tooltips
+    - Auto-scaling Y-axis in Mbps
+  - **Modern card-based UI** inspired by mainstream monitoring tools
+    - Animated status indicator with pulse effect
+    - Current/Average/Peak statistics badges
+    - Responsive grid layout
+    - Slate dark theme with CSS custom properties
   - Thread-safe client connection management
   - Stats caching for immediate delivery to new connections
+  - Easy to extend and customize
 
 - **VictoriaMetrics Integration** (VM_ENABLED) - Stub implementation
   - Time window aggregator (planned)
