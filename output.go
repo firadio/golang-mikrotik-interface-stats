@@ -10,7 +10,7 @@ import (
 
 // clearScreen clears the terminal screen using ANSI escape codes
 func clearScreen() {
-	// Use ANSI escape codes to clear screen
+	// Use ANSI escape codes to clear screen and move cursor to home
 	// This works on:
 	// - Linux/macOS terminals
 	// - Windows 10+ with Virtual Terminal Processing enabled
@@ -19,6 +19,14 @@ func clearScreen() {
 	// \033[2J - clear entire screen
 	// \033[H - move cursor to home position (1,1)
 	fmt.Print("\033[2J\033[H")
+}
+
+// moveCursorHome moves cursor to top-left without clearing screen
+func moveCursorHome() {
+	// \033[H - move cursor to home position (1,1)
+	// This allows overwriting previous content without clearing
+	// More efficient than full screen clear, reduces flicker
+	fmt.Print("\033[H")
 }
 
 // OutputWriter defines the interface for output handling
@@ -37,17 +45,25 @@ type RateInfo struct {
 
 // TerminalOutput handles terminal output (refresh or append mode)
 type TerminalOutput struct {
-	refreshMode bool
-	rateUnit    string
-	rateScale   string
+	refreshMode      bool
+	rateUnit         string
+	rateScale        string
+	uplinkInterfaces map[string]bool // Set of uplink interface names
 }
 
 // NewTerminalOutput creates a new terminal output handler
-func NewTerminalOutput(refreshMode bool, rateUnit, rateScale string) *TerminalOutput {
+func NewTerminalOutput(refreshMode bool, rateUnit, rateScale string, uplinkInterfaces []string) *TerminalOutput {
+	// Build uplink interface set for fast lookup
+	uplinkSet := make(map[string]bool)
+	for _, iface := range uplinkInterfaces {
+		uplinkSet[iface] = true
+	}
+
 	return &TerminalOutput{
-		refreshMode: refreshMode,
-		rateUnit:    rateUnit,
-		rateScale:   rateScale,
+		refreshMode:      refreshMode,
+		rateUnit:         rateUnit,
+		rateScale:        rateScale,
+		uplinkInterfaces: uplinkSet,
 	}
 }
 
@@ -74,32 +90,61 @@ func (t *TerminalOutput) WriteStats(timestamp time.Time, stats map[string]*RateI
 	sort.Strings(names)
 
 	if t.refreshMode {
-		// Refresh mode: clear and redraw
-		clearScreen()
+		// Refresh mode: move cursor to home and overwrite
+		// Use moveCursorHome instead of clearScreen to reduce flicker
+		moveCursorHome()
 		fmt.Println("Mikrotik Interface Traffic Monitor")
 		fmt.Println(strings.Repeat("=", 80))
 		fmt.Printf("Time: %s\n", timeStr)
 		fmt.Println(strings.Repeat("-", 80))
-		fmt.Printf("%-15s %-20s %-20s\n", "Interface", "RX Rate", "TX Rate")
+		fmt.Printf("%-15s %-20s %-20s\n", "Interface", "Download", "Upload")
 		fmt.Println(strings.Repeat("-", 80))
 
 		for _, name := range names {
 			info := stats[name]
-			rxFormatted := FormatRate(info.RxRate, t.rateUnit, t.rateScale)
-			txFormatted := FormatRate(info.TxRate, t.rateUnit, t.rateScale)
-			fmt.Printf("%-15s %-20s %-20s\n", info.InterfaceName, rxFormatted, txFormatted)
+			var downloadRate, uploadRate float64
+
+			// Check if this is an uplink interface
+			if t.uplinkInterfaces[name] {
+				// Uplink: RX=Upload (我发出), TX=Download (我收到)
+				downloadRate = info.TxRate
+				uploadRate = info.RxRate
+			} else {
+				// Downlink (default): RX=Download (我收到), TX=Upload (我发出)
+				downloadRate = info.RxRate
+				uploadRate = info.TxRate
+			}
+
+			downloadFormatted := FormatRate(downloadRate, t.rateUnit, t.rateScale)
+			uploadFormatted := FormatRate(uploadRate, t.rateUnit, t.rateScale)
+			fmt.Printf("%-15s %-20s %-20s\n", info.InterfaceName, downloadFormatted, uploadFormatted)
 		}
 
 		fmt.Println(strings.Repeat("-", 80))
 		fmt.Println("Press Ctrl+C to stop")
+		// Clear any remaining lines from previous output (if interface count decreased)
+		fmt.Print("\033[J")
 	} else {
 		// Append mode: add new lines
 		for _, name := range names {
 			info := stats[name]
-			rxFormatted := FormatRate(info.RxRate, t.rateUnit, t.rateScale)
-			txFormatted := FormatRate(info.TxRate, t.rateUnit, t.rateScale)
-			fmt.Printf("[%s] %s: RX: %s  TX: %s\n",
-				timeStr, info.InterfaceName, rxFormatted, txFormatted)
+			var downloadRate, uploadRate float64
+
+			// Check if this is an uplink interface
+			if t.uplinkInterfaces[name] {
+				// Uplink: RX=Upload (我发出), TX=Download (我收到)
+				downloadRate = info.TxRate
+				uploadRate = info.RxRate
+			} else {
+				// Downlink (default): RX=Download (我收到), TX=Upload (我发出)
+				downloadRate = info.RxRate
+				uploadRate = info.TxRate
+			}
+
+			downloadFormatted := FormatRate(downloadRate, t.rateUnit, t.rateScale)
+			uploadFormatted := FormatRate(uploadRate, t.rateUnit, t.rateScale)
+			fmt.Printf("[%s] %s: Download: %s  Upload: %s\n",
+				timeStr, info.InterfaceName, downloadFormatted, uploadFormatted)
 		}
 	}
 }
@@ -110,15 +155,23 @@ func (t *TerminalOutput) Close() {
 
 // LogOutput handles log-style output
 type LogOutput struct {
-	rateUnit  string
-	rateScale string
+	rateUnit         string
+	rateScale        string
+	uplinkInterfaces map[string]bool // Set of uplink interface names
 }
 
 // NewLogOutput creates a new log output handler
-func NewLogOutput(rateUnit, rateScale string) *LogOutput {
+func NewLogOutput(rateUnit, rateScale string, uplinkInterfaces []string) *LogOutput {
+	// Build uplink interface set for fast lookup
+	uplinkSet := make(map[string]bool)
+	for _, iface := range uplinkInterfaces {
+		uplinkSet[iface] = true
+	}
+
 	return &LogOutput{
-		rateUnit:  rateUnit,
-		rateScale: rateScale,
+		rateUnit:         rateUnit,
+		rateScale:        rateScale,
+		uplinkInterfaces: uplinkSet,
 	}
 }
 
@@ -136,9 +189,22 @@ func (l *LogOutput) WriteStats(timestamp time.Time, stats map[string]*RateInfo) 
 
 	for _, name := range names {
 		info := stats[name]
-		rxFormatted := FormatRate(info.RxRate, l.rateUnit, l.rateScale)
-		txFormatted := FormatRate(info.TxRate, l.rateUnit, l.rateScale)
-		log.Printf("interface=%s rx=%s tx=%s", info.InterfaceName, rxFormatted, txFormatted)
+		var downloadRate, uploadRate float64
+
+		// Check if this is an uplink interface
+		if l.uplinkInterfaces[name] {
+			// Uplink: RX=Upload (我发出), TX=Download (我收到)
+			downloadRate = info.TxRate
+			uploadRate = info.RxRate
+		} else {
+			// Downlink (default): RX=Download (我收到), TX=Upload (我发出)
+			downloadRate = info.RxRate
+			uploadRate = info.TxRate
+		}
+
+		downloadFormatted := FormatRate(downloadRate, l.rateUnit, l.rateScale)
+		uploadFormatted := FormatRate(uploadRate, l.rateUnit, l.rateScale)
+		log.Printf("interface=%s download=%s upload=%s", info.InterfaceName, downloadFormatted, uploadFormatted)
 	}
 }
 

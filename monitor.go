@@ -20,10 +20,10 @@ func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
 	// Create appropriate output writer based on config
 	var writer OutputWriter
 	if config.OutputMode == "log" {
-		writer = NewLogOutput(config.RateUnit, config.RateScale)
+		writer = NewLogOutput(config.RateUnit, config.RateScale, config.UplinkInterfaces)
 	} else {
 		refreshMode := config.DisplayMode != "append"
-		writer = NewTerminalOutput(refreshMode, config.RateUnit, config.RateScale)
+		writer = NewTerminalOutput(refreshMode, config.RateUnit, config.RateScale, config.UplinkInterfaces)
 	}
 
 	return &Monitor{

@@ -6,7 +6,8 @@ Monitor Mikrotik interface traffic statistics in real-time.
 
 - ✅ Connect to Mikrotik API
 - ✅ Configurable interface list via .env
-- ✅ Calculate per-second traffic rates (RX/TX)
+- ✅ Calculate per-second traffic rates
+- ✅ **User-friendly Download/Upload display** (automatically handles uplink/downlink interfaces)
 - ✅ Multiple display modes:
   - Refresh mode (like top/htop)
   - Append mode (like tail -f)
@@ -31,6 +32,9 @@ MIKROTIK_PASSWORD=your_password
 # Interface list (comma-separated)
 INTERFACES=vlan2622,vlan2624
 
+# Uplink interfaces (optional, comma-separated)
+UPLINK_INTERFACES=
+
 # Display mode (optional)
 DISPLAY_MODE=refresh  # or "append"
 
@@ -51,9 +55,17 @@ DEBUG=false  # or "true" to see API commands
 
 - **INTERFACES**: Comma-separated list of interfaces to monitor (default: vlan2622,vlan2624)
 
+- **UPLINK_INTERFACES**: Comma-separated list of uplink interfaces (optional)
+  - **Uplink interfaces**: RX=Upload (outgoing), TX=Download (incoming)
+  - **Other interfaces** (default): RX=Download (incoming), TX=Upload (outgoing)
+  - Example: `UPLINK_INTERFACES=ether1,sfp1` if ether1 and sfp1 connect to ISP
+  - Leave empty if all monitored interfaces are downlink (e.g., LANs, VLANs)
+  - **Why needed?** Network devices see traffic from their perspective. For uplink ports connected to ISP, received traffic (RX) is what you upload to internet, transmitted traffic (TX) is what you download from internet.
+
 - **DISPLAY_MODE**: How to display output
-  - `refresh` (default) - Clear screen and redraw like `top`/`htop`
-    - Uses ANSI escape codes for screen clearing
+  - `refresh` (default) - Redraw display like `top`/`htop`
+    - Uses ANSI cursor control (moves to home position and overwrites)
+    - No full screen clear, reduces flicker
     - **Recommended terminals:**
       - Windows: Windows Terminal, PowerShell 7+, Git Bash
       - Linux/macOS: Any standard terminal
@@ -121,7 +133,7 @@ Mikrotik Interface Traffic Monitor
 ================================================================================
 Time: 2025-11-07 01:08:36
 --------------------------------------------------------------------------------
-Interface       RX Rate              TX Rate
+Interface       Download             Upload
 --------------------------------------------------------------------------------
 vlan2622        26.43 KB/s           30.04 KB/s
 vlan2624        3.19 MB/s            580.37 KB/s
@@ -129,16 +141,18 @@ vlan2624        3.19 MB/s            580.37 KB/s
 Press Ctrl+C to stop
 ```
 
+Note: Display shows "Download" and "Upload" from user perspective. If an interface is configured as uplink, RX/TX are swapped automatically.
+
 **Append Mode:**
 ```
 2025/11/07 01:09:12 Connected to Mikrotik at 175.100.109.154:65428
 
 Monitoring interface traffic (Ctrl+C to stop):
 ================================================================================
-[2025-11-07 01:09:13] vlan2622: RX: 15.82 KB/s  TX: 18.12 KB/s
-[2025-11-07 01:09:13] vlan2624: RX: 3.00 MB/s  TX: 655.47 KB/s
-[2025-11-07 01:09:14] vlan2622: RX: 16.60 KB/s  TX: 50.48 KB/s
-[2025-11-07 01:09:14] vlan2624: RX: 3.64 MB/s  TX: 431.54 KB/s
+[2025-11-07 01:09:13] vlan2622: Download: 15.82 KB/s  Upload: 18.12 KB/s
+[2025-11-07 01:09:13] vlan2624: Download: 3.00 MB/s  Upload: 655.47 KB/s
+[2025-11-07 01:09:14] vlan2622: Download: 16.60 KB/s  Upload: 50.48 KB/s
+[2025-11-07 01:09:14] vlan2624: Download: 3.64 MB/s  Upload: 431.54 KB/s
 ```
 
 **Fixed scale mode (RATE_SCALE=M):**
@@ -147,7 +161,7 @@ Mikrotik Interface Traffic Monitor
 ================================================================================
 Time: 2025-11-07 01:08:36
 --------------------------------------------------------------------------------
-Interface       RX Rate              TX Rate
+Interface       Download             Upload
 --------------------------------------------------------------------------------
 vlan2622          0.03 MB/s            0.03 MB/s
 vlan2624          3.19 MB/s            0.58 MB/s
@@ -159,10 +173,10 @@ Press Ctrl+C to stop
 ```
 2025/11/07 01:09:12 Connected to Mikrotik at 175.100.109.154:65428
 2025/11/07 01:09:12 Mikrotik Interface Traffic Monitor started
-2025/11/07 01:09:13 interface=vlan2622 rx=15.82 KB/s tx=18.12 KB/s
-2025/11/07 01:09:13 interface=vlan2624 rx=3.00 MB/s tx=655.47 KB/s
-2025/11/07 01:09:14 interface=vlan2622 rx=16.60 KB/s tx=50.48 KB/s
-2025/11/07 01:09:14 interface=vlan2624 rx=3.64 MB/s tx=431.54 KB/s
+2025/11/07 01:09:13 interface=vlan2622 download=15.82 KB/s upload=18.12 KB/s
+2025/11/07 01:09:13 interface=vlan2624 download=3.00 MB/s upload=655.47 KB/s
+2025/11/07 01:09:14 interface=vlan2622 download=16.60 KB/s upload=50.48 KB/s
+2025/11/07 01:09:14 interface=vlan2624 download=3.64 MB/s upload=431.54 KB/s
 ```
 
 ## Requirements
@@ -202,6 +216,11 @@ Press Ctrl+C to stop
   - LogOutput: Service-friendly structured logging
 - Configurable rate units (bits vs bytes) and scales (auto/fixed)
 - Fixed-scale formatting with decimal alignment for easy reading
+- **Efficient cursor control**: Uses ANSI escape sequences to move cursor instead of clearing screen
+  - Reduces flicker and improves visual stability
+  - Interfaces always displayed in alphabetical order (no jumping)
+  - `\033[H` - move cursor to home position
+  - `\033[J` - clear from cursor to end of screen
 
 ## API Query Format
 

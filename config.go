@@ -16,11 +16,12 @@ type Config struct {
 	Interfaces []string // List of interfaces to monitor
 
 	// Display settings
-	DisplayMode   string // "refresh" or "append"
-	RateUnit      string // "auto", "bps", "Bps" (bits or Bytes per second)
-	RateScale     string // "auto", "k", "M", "G" (fixed scale)
-	OutputMode    string // "terminal" or "log"
-	Debug         bool   // Enable debug output
+	DisplayMode      string   // "refresh" or "append"
+	RateUnit         string   // "auto", "bps", "Bps" (bits or Bytes per second)
+	RateScale        string   // "auto", "k", "M", "G" (fixed scale)
+	OutputMode       string   // "terminal" or "log"
+	Debug            bool     // Enable debug output
+	UplinkInterfaces []string // List of uplink interfaces (RX=Upload, TX=Download)
 }
 
 // LoadConfig loads configuration from .env file or environment variables
@@ -92,16 +93,29 @@ func LoadConfig() (*Config, error) {
 		debug = true
 	}
 
+	// Parse uplink interface list (comma-separated)
+	// Uplink interfaces: RX=Upload (我发出), TX=Download (我收到)
+	// Other interfaces (default): RX=Download (我收到), TX=Upload (我发出)
+	uplinkInterfacesStr := os.Getenv("UPLINK_INTERFACES")
+	var uplinkInterfaces []string
+	if uplinkInterfacesStr != "" {
+		uplinkInterfaces = strings.Split(uplinkInterfacesStr, ",")
+		for i := range uplinkInterfaces {
+			uplinkInterfaces[i] = strings.TrimSpace(uplinkInterfaces[i])
+		}
+	}
+
 	return &Config{
-		Host:        host,
-		Port:        port,
-		Username:    username,
-		Password:    password,
-		Interfaces:  interfaces,
-		DisplayMode: displayMode,
-		RateUnit:    rateUnit,
-		RateScale:   rateScale,
-		OutputMode:  outputMode,
-		Debug:       debug,
+		Host:             host,
+		Port:             port,
+		Username:         username,
+		Password:         password,
+		Interfaces:       interfaces,
+		DisplayMode:      displayMode,
+		RateUnit:         rateUnit,
+		RateScale:        rateScale,
+		OutputMode:       outputMode,
+		Debug:            debug,
+		UplinkInterfaces: uplinkInterfaces,
 	}, nil
 }
