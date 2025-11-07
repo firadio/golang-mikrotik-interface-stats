@@ -163,6 +163,15 @@ type HistoryResponse struct {
 	Start      string              `json:"start"`
 	End        string              `json:"end"`
 	DataPoints []HistoryDataPoint  `json:"datapoints"`
+	Stats      *OverallStats       `json:"stats,omitempty"`
+}
+
+// OverallStats holds aggregated statistics for the entire time range
+type OverallStats struct {
+	UploadAvg    float64 `json:"upload_avg"`
+	DownloadAvg  float64 `json:"download_avg"`
+	UploadPeak   float64 `json:"upload_peak"`
+	DownloadPeak float64 `json:"download_peak"`
 }
 
 // QueryHistory queries historical data from VictoriaMetrics
@@ -192,6 +201,9 @@ func (c *VMClient) QueryHistory(params HistoryQueryParams) (*HistoryResponse, er
 		results[metric] = data
 	}
 
+	// Query overall statistics (max of peaks for the entire time range)
+	overallStats := c.queryOverallStats(params.Interface, interval, params.Start, params.End)
+
 	// Merge results into unified data points
 	dataPoints := c.mergeQueryResults(results)
 
@@ -201,7 +213,94 @@ func (c *VMClient) QueryHistory(params HistoryQueryParams) (*HistoryResponse, er
 		Start:      params.Start.Format(time.RFC3339),
 		End:        params.End.Format(time.RFC3339),
 		DataPoints: dataPoints,
+		Stats:      overallStats,
 	}, nil
+}
+
+// queryOverallStats queries aggregated statistics for the entire time range using PromQL
+func (c *VMClient) queryOverallStats(interfaceName, interval string, start, end time.Time) *OverallStats {
+	stats := &OverallStats{}
+
+	// Use PromQL aggregation functions to get true max/avg over the time range
+	queries := map[string]string{
+		"upload_avg":    fmt.Sprintf(`avg_over_time(mikrotik_interface_tx_rate_avg{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
+		"download_avg":  fmt.Sprintf(`avg_over_time(mikrotik_interface_rx_rate_avg{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
+		"upload_peak":   fmt.Sprintf(`max_over_time(mikrotik_interface_tx_rate_peak{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
+		"download_peak": fmt.Sprintf(`max_over_time(mikrotik_interface_rx_rate_peak{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
+	}
+
+	for metric, query := range queries {
+		value := c.queryInstant(query, end)
+		switch metric {
+		case "upload_avg":
+			stats.UploadAvg = value
+		case "download_avg":
+			stats.DownloadAvg = value
+		case "upload_peak":
+			stats.UploadPeak = value
+		case "download_peak":
+			stats.DownloadPeak = value
+		}
+	}
+
+	return stats
+}
+
+// queryInstant executes an instant query against VictoriaMetrics
+func (c *VMClient) queryInstant(query string, timestamp time.Time) float64 {
+	baseURL := fmt.Sprintf("%s/api/v1/query", c.config.URL)
+	req, err := http.NewRequest("GET", baseURL, nil)
+	if err != nil {
+		log.Printf("[VM] Error creating instant query request: %v", err)
+		return 0
+	}
+
+	q := req.URL.Query()
+	q.Add("query", query)
+	q.Add("time", fmt.Sprintf("%d", timestamp.Unix()))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		log.Printf("[VM] Error executing instant query: %v", err)
+		return 0
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[VM] Instant query failed (%d): %s", resp.StatusCode, string(body))
+		return 0
+	}
+
+	var vmResp struct {
+		Status string `json:"status"`
+		Data   struct {
+			ResultType string `json:"resultType"`
+			Result     []struct {
+				Metric map[string]string `json:"metric"`
+				Value  []interface{}     `json:"value"`
+			} `json:"result"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&vmResp); err != nil {
+		log.Printf("[VM] Error decoding instant query response: %v", err)
+		return 0
+	}
+
+	if vmResp.Status != "success" || len(vmResp.Data.Result) == 0 {
+		return 0
+	}
+
+	if len(vmResp.Data.Result[0].Value) >= 2 {
+		valueStr := vmResp.Data.Result[0].Value[1].(string)
+		var val float64
+		fmt.Sscanf(valueStr, "%f", &val)
+		return val
+	}
+
+	return 0
 }
 
 // vmDataPoint is internal structure for VM query results

@@ -380,19 +380,32 @@ function displayHistoricalStats(data) {
         return;
     }
 
-    // Calculate statistics
-    const uploadAvgs = data.datapoints.map(dp => dp.upload_avg).filter(v => v > 0);
-    const downloadAvgs = data.datapoints.map(dp => dp.download_avg).filter(v => v > 0);
-    const uploadPeaks = data.datapoints.map(dp => dp.upload_peak).filter(v => v > 0);
-    const downloadPeaks = data.datapoints.map(dp => dp.download_peak).filter(v => v > 0);
+    // Use server-calculated statistics if available, otherwise calculate from datapoints
+    let stats;
+    if (data.stats) {
+        // Use accurate statistics from VictoriaMetrics aggregation queries
+        stats = {
+            uploadAvg: data.stats.upload_avg || 0,
+            downloadAvg: data.stats.download_avg || 0,
+            uploadMax: data.stats.upload_peak || 0,
+            downloadMax: data.stats.download_peak || 0,
+            dataPoints: data.datapoints.length
+        };
+    } else {
+        // Fallback: calculate from returned datapoints (may be inaccurate due to sampling)
+        const uploadAvgs = data.datapoints.map(dp => dp.upload_avg).filter(v => v > 0);
+        const downloadAvgs = data.datapoints.map(dp => dp.download_avg).filter(v => v > 0);
+        const uploadPeaks = data.datapoints.map(dp => dp.upload_peak).filter(v => v > 0);
+        const downloadPeaks = data.datapoints.map(dp => dp.download_peak).filter(v => v > 0);
 
-    const stats = {
-        uploadAvg: uploadAvgs.length > 0 ? uploadAvgs.reduce((a, b) => a + b, 0) / uploadAvgs.length : 0,
-        downloadAvg: downloadAvgs.length > 0 ? downloadAvgs.reduce((a, b) => a + b, 0) / downloadAvgs.length : 0,
-        uploadMax: uploadPeaks.length > 0 ? Math.max(...uploadPeaks) : 0,
-        downloadMax: downloadPeaks.length > 0 ? Math.max(...downloadPeaks) : 0,
-        dataPoints: data.datapoints.length
-    };
+        stats = {
+            uploadAvg: uploadAvgs.length > 0 ? uploadAvgs.reduce((a, b) => a + b, 0) / uploadAvgs.length : 0,
+            downloadAvg: downloadAvgs.length > 0 ? downloadAvgs.reduce((a, b) => a + b, 0) / downloadAvgs.length : 0,
+            uploadMax: uploadPeaks.length > 0 ? Math.max(...uploadPeaks) : 0,
+            downloadMax: downloadPeaks.length > 0 ? Math.max(...downloadPeaks) : 0,
+            dataPoints: data.datapoints.length
+        };
+    }
 
     container.innerHTML = `
         <div class="stat-card">
