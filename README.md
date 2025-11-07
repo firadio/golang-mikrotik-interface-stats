@@ -1,25 +1,42 @@
 # Mikrotik Interface Stats
 
-Monitor Mikrotik interface traffic statistics in real-time.
+**A professional, real-time network traffic monitoring tool for Mikrotik routers**
+
+Monitor Mikrotik interface traffic with a modern web dashboard, terminal output, and historical data analysis powered by VictoriaMetrics.
+
+![Web Dashboard](docs/screenshot.png)
+*Real-time monitoring with responsive 1-4 column grid layout*
 
 ## Features
 
-- ✅ Connect to Mikrotik API
+### Core Monitoring
+- ✅ Connect to Mikrotik API with MD5 challenge-response authentication
 - ✅ Configurable interface list via .env
-- ✅ Calculate per-second traffic rates
+- ✅ Calculate per-second traffic rates with 1-second precision
 - ✅ **User-friendly Download/Upload display** (automatically handles uplink/downlink interfaces)
-- ✅ Multiple display modes:
-  - Refresh mode (like top/htop)
-  - Append mode (like tail -f)
-  - Log mode (for services/daemons)
+- ✅ Multiple terminal display modes (refresh/append/log)
 - ✅ Configurable rate units (bits vs bytes per second)
 - ✅ Auto-scaling or fixed-scale display with decimal alignment
-- ✅ Precise timing using time.Ticker (no missed seconds)
-- ✅ Real-time monitoring with 1-second intervals
-- ✅ Modular output system for easy extension
-- ✅ **Web interface with real-time Chart.js graphs**
-- ✅ **Historical data storage and query via VictoriaMetrics**
-- ✅ **Embedded static files** (single-file distribution with developer mode support)
+- ✅ **Performance optimized**: Conditional statistics calculation (only when needed)
+
+### Web Interface (Modern & Professional)
+- ✅ **Real-time monitoring** with WebSocket (1-second updates)
+- ✅ **Responsive 1-4 column grid** layout (adapts to screen size)
+- ✅ **Interactive Chart.js graphs** with 60-second rolling window
+- ✅ **Collapsible statistics panel** showing current speed, average, and peak
+- ✅ **Frontend-calculated statistics** (10-second rolling window)
+- ✅ **Modal chart zoom** for detailed analysis
+- ✅ **Interface labeling** system with custom names
+- ✅ **Clean, modern dark theme** optimized for monitoring
+- ✅ **Historical data query** interface with time range selection
+- ✅ **Embedded static files** (single-file distribution with hot-reload dev mode)
+
+### Data Management
+- ✅ **VictoriaMetrics integration** for historical data storage
+- ✅ **Dual-interval aggregation** (10s for short-term, 5min for long-term)
+- ✅ **PromQL-based queries** with automatic interval selection
+- ✅ **Optimized data transmission** (67% reduction in WebSocket payload)
+- ✅ **Automatic reconnection** on network interruptions
 
 ## Configuration
 
@@ -178,28 +195,41 @@ When web interface is enabled (`WEB_ENABLED=true`), access the dashboard at:
 http://localhost:8080
 ```
 
-**Features:**
-- ✅ Real-time monitoring with 60-second rolling charts
-- ✅ WebSocket connection for live updates (1-second refresh)
-- ✅ Historical data query interface
-- ✅ Interactive Chart.js graphs with zoom/pan
-- ✅ Time range selector (1h, 6h, 24h, 7d, 30d, custom)
-- ✅ Per-interface statistics (Average + Peak rates)
-- ✅ Modern dark theme with responsive design
-- ✅ Automatic reconnection on disconnect
+**Main Dashboard:**
+- ✅ **Responsive grid layout**: Automatically adjusts from 1 to 4 columns based on screen width
+  - ≥1920px: 4 columns (perfect for 4K displays)
+  - 1400-1919px: 3 columns (standard desktop)
+  - 900-1399px: 2 columns (laptop)
+  - <900px: 1 column (mobile/tablet)
+- ✅ **Real-time Chart.js graphs**: 60-second rolling window with upload/download lines
+- ✅ **Collapsible statistics**: Click to expand and view 10-second average and peak values
+- ✅ **Modal zoom view**: Click chart to open full-screen detailed analysis
+- ✅ **Custom interface labels**: Edit interface names for easier identification
+- ✅ **WebSocket live updates**: Sub-second latency with automatic reconnection
+- ✅ **Clean interface**: No borders, transparent cards, optimized for high-density monitoring
 
 **Historical Data:**
 Click the "📊 History" button on any interface card to:
 - View historical data from VictoriaMetrics
 - Select time ranges (1 hour to 30 days)
-- Choose aggregation interval (auto, 10s, 5min)
-- See 4 metrics: Upload/Download Average and Peak
+- Automatic interval selection (10s for <1h, 5min for >1h)
+- See 4 metrics calculated by VictoriaMetrics PromQL:
+  - Upload/Download Average (mean rate)
+  - Upload/Download Peak (max rate)
+- Interactive Chart.js graphs with time axis
 - Export-ready data visualization
 
+**Settings:**
+Access via ⚙️ icon in header:
+- Customize interface display names
+- Changes saved to server configuration
+- Synced across all connected clients
+
 **Developer Mode:**
-- If `web/` directory exists: Uses local files (hot-reload)
-- Otherwise: Uses embedded files from binary
+- If `web/` directory exists: Uses local files (hot-reload for development)
+- Otherwise: Uses embedded files from binary (production)
 - No separate static file distribution needed
+- Single executable deployment
 
 ## Output Examples
 
@@ -298,6 +328,59 @@ Press Ctrl+C to stop
 └── README.md               # Documentation
 ```
 
+## Architecture Highlights
+
+This project demonstrates modern Go practices and efficient data flow design:
+
+### Separation of Concerns
+
+**Data Layer (Backend)**:
+- Collects raw traffic rates from Mikrotik API
+- Calculates statistics ONLY when needed (terminal/log output)
+- Stores historical data to VictoriaMetrics
+- Sends minimal payload via WebSocket (only instantaneous rates)
+
+**View Layer (Frontend)**:
+- Calculates its own statistics from real-time data
+- Independent 10-second sliding window
+- Flexible window size without backend changes
+- Responsive UI with automatic column adjustment
+
+**Storage Layer (VictoriaMetrics)**:
+- Server-side aggregation using PromQL
+- Dual-interval strategy (10s + 5min)
+- Automatic interval selection based on query range
+
+### Performance Optimizations
+
+1. **Conditional Statistics Calculation** (`monitor.go:152`)
+   - Only calculates avg/peak when terminal or log output is enabled
+   - Skips ring buffer updates when Web-only mode
+   - Saves CPU cycles for high-frequency monitoring
+
+2. **WebSocket Payload Reduction** (`web.go:299-302`)
+   - Removed 4 redundant fields (avg/peak/mbps)
+   - 67% reduction in data size (6 fields → 2 fields)
+   - Lower bandwidth, faster transmission
+
+3. **Frontend Independence** (`app.js:53-103`)
+   - Self-contained statistics calculation
+   - No dependency on backend-calculated values
+   - Can adjust window size client-side
+
+4. **Responsive Grid Layout** (`style.css:122-151`)
+   - CSS Grid with auto-fit and media queries
+   - Adapts to screen width: 1/2/3/4 columns
+   - Optimized for 4K displays and mobile devices
+
+### Code Quality
+
+- ✅ **No console.log in production**: All debug code removed
+- ✅ **No unused CSS**: 69 lines of legacy styles cleaned up
+- ✅ **No dead code**: Passes `go vet` with zero warnings
+- ✅ **Clean separation**: Data/View/Storage layers independent
+- ✅ **Single binary**: Embedded files, no external dependencies
+
 ## Implementation Details
 
 ### Core Monitoring
@@ -308,6 +391,7 @@ Press Ctrl+C to stop
 - Uses `time.Ticker` for accurate 1-second intervals
 - Configurable interface list via environment variables
 - **Automatically enables ANSI support on Windows** via Windows API (no manual setup needed)
+- **Performance optimized**: Statistics (avg/peak) only calculated when terminal/log output is enabled
 
 ### Output System
 - Modular output system with OutputWriter interface:
@@ -320,21 +404,29 @@ Press Ctrl+C to stop
   - Reduces flicker and improves visual stability
   - Interfaces always displayed in alphabetical order (no jumping)
 
-### Web Interface
+### Web Interface Architecture
 - **Embedded static files**: Go 1.16+ `//go:embed` directive
 - **Developer mode**: Auto-detects `web/` directory for hot-reload
-- **Production mode**: Uses embedded files from binary (9.5MB total)
-- **WebSocket**: Real-time push of interface statistics
+- **Production mode**: Uses embedded files from binary (single executable)
+- **WebSocket optimization**: Minimal JSON payload (only upload_rate/download_rate)
+  - 67% reduction in data size vs previous version
+  - Frontend calculates statistics independently
 - **Chart.js 4.4.0**: Modern, responsive graphs with time axis
 - **Dark theme**: Slate color scheme optimized for monitoring
+- **Frontend statistics**: 10-second sliding window calculation in JavaScript
+  - Eliminates backend-to-frontend dependency
+  - Flexible window size adjustment without backend restart
 
 ### VictoriaMetrics Integration
 - **Fixed time-boundary aggregation**: Windows aligned to intervals (not sliding)
 - **Dual-interval support**: 10s (short-term) + 300s (long-term)
 - **Prometheus format**: Compatible with standard VM import API
 - **Retry logic**: Automatic retry with exponential backoff
-- **Query API**: PromQL-based historical data retrieval
+- **Query API**: PromQL-based historical data retrieval with automatic aggregation
 - **Auto-interval selection**: Chooses appropriate granularity based on time range
+- **Server-side calculation**: Uses VictoriaMetrics PromQL functions for accurate statistics
+  - `rate()` for average calculation
+  - `max_over_time()` for peak detection
 - **Metrics exported**:
   - `mikrotik_interface_rx_rate_avg{interface,interval}` - Average download rate
   - `mikrotik_interface_rx_rate_peak{interface,interval}` - Peak download rate
