@@ -7,6 +7,8 @@ Monitor Mikrotik interface traffic with a modern web dashboard, terminal output,
 ![Web Dashboard](docs/screenshot.png)
 *Real-time monitoring with responsive 1-4 column grid layout*
 
+English | [简体中文](README.zh-CN.md)
+
 ## Features
 
 ### Core Monitoring
