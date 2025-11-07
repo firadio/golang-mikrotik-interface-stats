@@ -34,6 +34,47 @@
                 <h2 id="modalTitle" class="modal-title"></h2>
                 <button class="modal-close" onclick="closeChartModal()">✕</button>
             </div>
+            <div class="modal-stats">
+                <div class="modal-stat-card current">
+                    <div class="stat-card-title">Current Speed</div>
+                    <div class="stat-card-content">
+                        <div class="stat-line upload">
+                            <span class="stat-icon">↑</span>
+                            <span class="stat-value" id="modalCurrentUpload">0 Mbps</span>
+                        </div>
+                        <div class="stat-line download">
+                            <span class="stat-icon">↓</span>
+                            <span class="stat-value" id="modalCurrentDownload">0 Mbps</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-stat-card sustained">
+                    <div class="stat-card-title">Average (10s)</div>
+                    <div class="stat-card-content">
+                        <div class="stat-line upload">
+                            <span class="stat-icon">↑</span>
+                            <span class="stat-value" id="modalAvgUpload">0 Mbps</span>
+                        </div>
+                        <div class="stat-line download">
+                            <span class="stat-icon">↓</span>
+                            <span class="stat-value" id="modalAvgDownload">0 Mbps</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-stat-card burst">
+                    <div class="stat-card-title">Peak (10s)</div>
+                    <div class="stat-card-content">
+                        <div class="stat-line upload">
+                            <span class="stat-icon">↑</span>
+                            <span class="stat-value" id="modalPeakUpload">0 Mbps</span>
+                        </div>
+                        <div class="stat-line download">
+                            <span class="stat-icon">↓</span>
+                            <span class="stat-value" id="modalPeakDownload">0 Mbps</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="modal-body">
                 <canvas id="modalChart"></canvas>
             </div>

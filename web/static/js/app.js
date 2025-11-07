@@ -10,6 +10,7 @@ let availableInterfaces = new Set();
 let interfaceLabels = {}; // Store custom labels for interfaces
 let modalChart = null;
 let currentZoomedInterface = null;
+let interfaceStats = {}; // Store current statistics for each interface
 
 // Chart configuration
 const MAX_DATA_POINTS = 60; // Show last 60 seconds
@@ -127,16 +128,7 @@ function createChart(canvasId, interfaceName) {
             },
             plugins: {
                 legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: CHART_COLORS.text,
-                        usePointStyle: true,
-                        padding: 15,
-                        font: {
-                            size: 12
-                        }
-                    }
+                    display: false
                 },
                 tooltip: {
                     backgroundColor: 'rgba(30, 41, 59, 0.95)',
@@ -250,18 +242,24 @@ function updateDisplay(data) {
             createChart(canvasId, name);
         }
 
-        // Update current stats badges
+        // Update stats display
         card.querySelector('.current-upload').textContent = formatBytes(stats.upload_rate);
         card.querySelector('.current-download').textContent = formatBytes(stats.download_rate);
-
-        // Update metrics
         card.querySelector('.avg-upload').textContent = formatBytes(stats.upload_avg);
         card.querySelector('.avg-download').textContent = formatBytes(stats.download_avg);
         card.querySelector('.peak-upload').textContent = formatBytes(stats.upload_peak);
         card.querySelector('.peak-download').textContent = formatBytes(stats.download_peak);
 
+        // Store stats for modal
+        interfaceStats[name] = stats;
+
         // Update chart
         updateChart(name, data.timestamp, stats.upload_rate, stats.download_rate);
+
+        // Update modal stats if this interface is currently zoomed
+        if (currentZoomedInterface === name) {
+            updateModalStats(stats);
+        }
     }
 
     // Update interface selector in history panel
@@ -283,16 +281,8 @@ function createInterfaceCard(name) {
                 ${hasCustomLabel ? `<span class="original-name">(${name})</span>` : ''}
                 <button class="edit-btn" data-interface="${name}" title="Edit label">✏️</button>
             </div>
-            <div class="interface-stats">
-                <button class="history-btn" onclick="openHistoryPanel('${name}')">📊 History</button>
-                <div class="stat-badge upload">
-                    <div class="stat-label">↑ Upload</div>
-                    <div class="stat-value current-upload">0 Mbps</div>
-                </div>
-                <div class="stat-badge download">
-                    <div class="stat-label">↓ Download</div>
-                    <div class="stat-value current-download">0 Mbps</div>
-                </div>
+            <div class="interface-actions">
+                <button class="history-btn" onclick="openHistoryPanel('${name}')">📊</button>
             </div>
         </div>
 
@@ -300,22 +290,31 @@ function createInterfaceCard(name) {
             <canvas id="chart-${name}"></canvas>
         </div>
 
-        <div class="metrics-row">
-            <div class="metric-item upload">
-                <span class="metric-label">↑ Average Upload</span>
-                <span class="metric-value avg-upload">0 Mbps</span>
+        <div class="stats-detail">
+            <div class="stats-main">
+                <div class="stat-current">
+                    <span class="stat-upload current-upload">0</span>
+                    <span class="stat-download current-download">0</span>
+                </div>
+                <button class="stats-toggle" onclick="toggleStats('${name}')">
+                    <span class="toggle-icon">▼</span>
+                </button>
             </div>
-            <div class="metric-item download">
-                <span class="metric-label">↓ Average Download</span>
-                <span class="metric-value avg-download">0 Mbps</span>
-            </div>
-            <div class="metric-item upload">
-                <span class="metric-label">↑ Peak Upload</span>
-                <span class="metric-value peak-upload">0 Mbps</span>
-            </div>
-            <div class="metric-item download">
-                <span class="metric-label">↓ Peak Download</span>
-                <span class="metric-value peak-download">0 Mbps</span>
+            <div class="stats-content" id="stats-${name}">
+                <div class="stat-row">
+                    <span class="stat-label">平均 (10s)</span>
+                    <div class="stat-values">
+                        <span class="stat-upload avg-upload">0</span>
+                        <span class="stat-download avg-download">0</span>
+                    </div>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">峰值 (10s)</span>
+                    <div class="stat-values">
+                        <span class="stat-upload peak-upload">0</span>
+                        <span class="stat-download peak-download">0</span>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -561,16 +560,7 @@ function openChartModal(interfaceName) {
                 },
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            color: CHART_COLORS.text,
-                            usePointStyle: true,
-                            padding: 20,
-                            font: {
-                                size: 14
-                            }
-                        }
+                        display: false
                     },
                     tooltip: {
                         backgroundColor: 'rgba(30, 41, 59, 0.95)',
@@ -634,6 +624,11 @@ function openChartModal(interfaceName) {
     // Copy data from original chart
     updateModalChart();
 
+    // Update modal stats
+    if (interfaceStats[interfaceName]) {
+        updateModalStats(interfaceStats[interfaceName]);
+    }
+
     // Prevent body scroll
     document.body.style.overflow = 'hidden';
 }
@@ -660,6 +655,20 @@ function updateModalChart() {
     modalChart.update('none');
 }
 
+function updateModalStats(stats) {
+    // Update current stats
+    document.getElementById('modalCurrentUpload').textContent = formatBytes(stats.upload_rate);
+    document.getElementById('modalCurrentDownload').textContent = formatBytes(stats.download_rate);
+
+    // Update sustained peak (average) stats
+    document.getElementById('modalAvgUpload').textContent = formatBytes(stats.upload_avg);
+    document.getElementById('modalAvgDownload').textContent = formatBytes(stats.download_avg);
+
+    // Update burst peak stats
+    document.getElementById('modalPeakUpload').textContent = formatBytes(stats.upload_peak);
+    document.getElementById('modalPeakDownload').textContent = formatBytes(stats.download_peak);
+}
+
 // Close modal on Escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && currentZoomedInterface) {
@@ -673,6 +682,24 @@ document.getElementById('chartModal')?.addEventListener('click', (e) => {
         closeChartModal();
     }
 });
+
+// ============================================================================
+// Stats Toggle Function
+// ============================================================================
+
+function toggleStats(interfaceName) {
+    const statsContent = document.getElementById(`stats-${interfaceName}`);
+    const toggleBtn = statsContent.previousElementSibling;
+    const toggleIcon = toggleBtn.querySelector('.toggle-icon');
+
+    if (statsContent.style.display === 'none' || !statsContent.style.display) {
+        statsContent.style.display = 'block';
+        toggleIcon.textContent = '▲';
+    } else {
+        statsContent.style.display = 'none';
+        toggleIcon.textContent = '▼';
+    }
+}
 
 // ============================================================================
 // Initialize
