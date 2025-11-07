@@ -27,6 +27,19 @@
         <div id="interfaces" class="interfaces-grid"></div>
     </div>
 
+    <!-- Chart Zoom Modal -->
+    <div id="chartModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title"></h2>
+                <button class="modal-close" onclick="closeChartModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <canvas id="modalChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/app.js"></script>
 </body>
 </html>

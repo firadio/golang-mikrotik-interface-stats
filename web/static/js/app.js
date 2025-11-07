@@ -8,6 +8,8 @@ let charts = {};
 let chartData = {};
 let availableInterfaces = new Set();
 let interfaceLabels = {}; // Store custom labels for interfaces
+let modalChart = null;
+let currentZoomedInterface = null;
 
 // Chart configuration
 const MAX_DATA_POINTS = 60; // Show last 60 seconds
@@ -217,6 +219,11 @@ function updateChart(interfaceName, timestamp, uploadRate, downloadRate) {
     chart.data.datasets[0].data = data.upload;
     chart.data.datasets[1].data = data.download;
     chart.update('none'); // Update without animation for smooth real-time display
+
+    // Update modal chart if this interface is currently zoomed
+    if (currentZoomedInterface === interfaceName) {
+        updateModalChart();
+    }
 }
 
 function updateDisplay(data) {
@@ -319,6 +326,14 @@ function createInterfaceCard(name) {
         const editBtn = card.querySelector('.edit-btn');
         if (nameElement && editBtn) {
             makeInterfaceNameEditable(name, nameElement, editBtn);
+        }
+
+        // Add click event to chart container for zoom
+        const chartContainer = card.querySelector('.chart-container');
+        if (chartContainer) {
+            chartContainer.addEventListener('click', () => {
+                openChartModal(name);
+            });
         }
     }, 0);
 
@@ -488,6 +503,176 @@ function makeInterfaceNameEditable(interfaceName, nameElement, editBtn) {
     // Click edit button to edit
     editBtn.addEventListener('click', startEdit);
 }
+
+// ============================================================================
+// Chart Zoom Modal Functions
+// ============================================================================
+
+function openChartModal(interfaceName) {
+    currentZoomedInterface = interfaceName;
+    const modal = document.getElementById('chartModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const displayName = getInterfaceDisplayName(interfaceName);
+
+    modalTitle.textContent = `${displayName} - Real-time Traffic`;
+    modal.classList.add('show');
+
+    // Create modal chart if not exists
+    if (!modalChart) {
+        const ctx = document.getElementById('modalChart').getContext('2d');
+        modalChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Upload',
+                        data: [],
+                        borderColor: CHART_COLORS.upload,
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Download',
+                        data: [],
+                        borderColor: CHART_COLORS.download,
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 300
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: CHART_COLORS.text,
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                        titleColor: CHART_COLORS.text,
+                        bodyColor: '#f1f5f9',
+                        borderColor: 'rgba(71, 85, 105, 0.5)',
+                        borderWidth: 1,
+                        padding: 16,
+                        displayColors: true,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + formatBytes(context.parsed.y);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: {
+                            color: CHART_COLORS.grid,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: CHART_COLORS.text,
+                            maxTicksLimit: 12,
+                            maxRotation: 0,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        display: true,
+                        beginAtZero: true,
+                        grid: {
+                            color: CHART_COLORS.grid,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: CHART_COLORS.text,
+                            callback: function(value) {
+                                return (value * 8 / 1000000).toFixed(0) + ' Mbps';
+                            },
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Copy data from original chart
+    updateModalChart();
+
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+}
+
+function closeChartModal() {
+    const modal = document.getElementById('chartModal');
+    modal.classList.remove('show');
+    currentZoomedInterface = null;
+
+    // Restore body scroll
+    document.body.style.overflow = '';
+}
+
+function updateModalChart() {
+    if (!modalChart || !currentZoomedInterface) return;
+
+    const data = chartData[currentZoomedInterface];
+    if (!data) return;
+
+    // Update modal chart with current data
+    modalChart.data.labels = [...data.labels];
+    modalChart.data.datasets[0].data = [...data.upload];
+    modalChart.data.datasets[1].data = [...data.download];
+    modalChart.update('none');
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && currentZoomedInterface) {
+        closeChartModal();
+    }
+});
+
+// Close modal on background click
+document.getElementById('chartModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'chartModal') {
+        closeChartModal();
+    }
+});
 
 // ============================================================================
 // Initialize
