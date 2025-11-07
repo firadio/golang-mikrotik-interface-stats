@@ -24,7 +24,7 @@ type VMClient struct {
 // NewVMClient creates a new VictoriaMetrics client
 func NewVMClient(config *VMConfig) *VMClient {
 	log.Printf("[VM] VictoriaMetrics client initialized (URL: %s)", config.URL)
-	log.Printf("[VM] Short interval: %v, Long interval: %v", config.ShortInterval, config.LongInterval)
+	log.Printf("[VM] Data collection interval: %v", config.Interval)
 
 	return &VMClient{
 		config: config,
@@ -168,48 +168,65 @@ type HistoryResponse struct {
 
 // OverallStats holds aggregated statistics for the entire time range
 type OverallStats struct {
-	UploadAvg    float64 `json:"upload_avg"`
-	DownloadAvg  float64 `json:"download_avg"`
-	UploadPeak   float64 `json:"upload_peak"`
-	DownloadPeak float64 `json:"download_peak"`
+	UploadAvg    float64 `json:"upload_avg"`     // Average Peak (sustained): max of avg values
+	DownloadAvg  float64 `json:"download_avg"`   // Average Peak (sustained): max of avg values
+	UploadPeak   float64 `json:"upload_peak"`    // Burst Peak (instantaneous): max of peak values
+	DownloadPeak float64 `json:"download_peak"`  // Burst Peak (instantaneous): max of peak values
 }
 
 // QueryHistory queries historical data from VictoriaMetrics
 func (c *VMClient) QueryHistory(params HistoryQueryParams) (*HistoryResponse, error) {
-	// Determine interval (auto-select based on time range)
-	interval := params.Interval
-	if interval == "auto" || interval == "" {
-		interval = c.autoSelectInterval(params.Start, params.End)
+	// Determine query interval (for data sampling, e.g., "30m", "1h")
+	queryInterval := params.Interval
+	if queryInterval == "auto" || queryInterval == "" {
+		queryInterval = c.autoSelectInterval(params.Start, params.End)
 	}
 
-	// Build PromQL queries
+	// Now we only have one storage interval: 10s
+	storageInterval := "10s"
+
+	log.Printf("[VM] Querying history: interface=%s, query_interval=%s, storage_interval=%s, range=%s to %s",
+		params.Interface, queryInterval, storageInterval,
+		params.Start.Format("15:04:05"), params.End.Format("15:04:05"))
+
+	// Build PromQL queries using storage interval
 	queries := map[string]string{
-		"upload_avg":   fmt.Sprintf(`mikrotik_interface_tx_rate_avg{interface="%s",interval="%s"}`, params.Interface, interval),
-		"download_avg": fmt.Sprintf(`mikrotik_interface_rx_rate_avg{interface="%s",interval="%s"}`, params.Interface, interval),
-		"upload_peak":  fmt.Sprintf(`mikrotik_interface_tx_rate_peak{interface="%s",interval="%s"}`, params.Interface, interval),
-		"download_peak": fmt.Sprintf(`mikrotik_interface_rx_rate_peak{interface="%s",interval="%s"}`, params.Interface, interval),
+		"upload_avg":   fmt.Sprintf(`mikrotik_interface_tx_rate_avg{interface="%s",interval="%s"}`, params.Interface, storageInterval),
+		"download_avg": fmt.Sprintf(`mikrotik_interface_rx_rate_avg{interface="%s",interval="%s"}`, params.Interface, storageInterval),
+		"upload_peak":  fmt.Sprintf(`mikrotik_interface_tx_rate_peak{interface="%s",interval="%s"}`, params.Interface, storageInterval),
+		"download_peak": fmt.Sprintf(`mikrotik_interface_rx_rate_peak{interface="%s",interval="%s"}`, params.Interface, storageInterval),
 	}
+
+	// Parse query interval to get step in seconds
+	queryDuration, err := time.ParseDuration(queryInterval)
+	if err != nil {
+		log.Printf("[VM] Warning: Failed to parse query interval '%s': %v, using default step", queryInterval, err)
+		queryDuration = 5 * time.Minute
+	}
+	step := int(queryDuration.Seconds())
 
 	// Query each metric
 	results := make(map[string][]vmDataPoint)
 	for metric, query := range queries {
-		data, err := c.queryRange(query, params.Start, params.End)
+		log.Printf("[VM] Executing query for %s: %s (step=%ds)", metric, query, step)
+		data, err := c.queryRange(query, params.Start, params.End, step)
 		if err != nil {
 			log.Printf("[VM] Warning: Failed to query %s: %v", metric, err)
 			continue
 		}
+		log.Printf("[VM] Query %s returned %d data points", metric, len(data))
 		results[metric] = data
 	}
 
 	// Query overall statistics (max of peaks for the entire time range)
-	overallStats := c.queryOverallStats(params.Interface, interval, params.Start, params.End)
+	overallStats := c.queryOverallStats(params.Interface, storageInterval, params.Start, params.End)
 
 	// Merge results into unified data points
 	dataPoints := c.mergeQueryResults(results)
 
 	return &HistoryResponse{
 		Interface:  params.Interface,
-		Interval:   interval,
+		Interval:   queryInterval,
 		Start:      params.Start.Format(time.RFC3339),
 		End:        params.End.Format(time.RFC3339),
 		DataPoints: dataPoints,
@@ -221,15 +238,20 @@ func (c *VMClient) QueryHistory(params HistoryQueryParams) (*HistoryResponse, er
 func (c *VMClient) queryOverallStats(interfaceName, interval string, start, end time.Time) *OverallStats {
 	stats := &OverallStats{}
 
-	// Use PromQL aggregation functions to get true max/avg over the time range
+	// Use PromQL max_over_time to get peak statistics
+	// upload_avg/download_avg: Peak of average values (sustained peak)
+	// upload_peak/download_peak: Peak of peak values (burst peak)
 	queries := map[string]string{
-		"upload_avg":    fmt.Sprintf(`avg_over_time(mikrotik_interface_tx_rate_avg{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
-		"download_avg":  fmt.Sprintf(`avg_over_time(mikrotik_interface_rx_rate_avg{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
+		"upload_avg":    fmt.Sprintf(`max_over_time(mikrotik_interface_tx_rate_avg{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
+		"download_avg":  fmt.Sprintf(`max_over_time(mikrotik_interface_rx_rate_avg{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
 		"upload_peak":   fmt.Sprintf(`max_over_time(mikrotik_interface_tx_rate_peak{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
 		"download_peak": fmt.Sprintf(`max_over_time(mikrotik_interface_rx_rate_peak{interface="%s",interval="%s"}[%ds])`, interfaceName, interval, int(end.Sub(start).Seconds())),
 	}
 
+	log.Printf("[VM] Querying overall stats with interval=%s", interval)
+
 	for metric, query := range queries {
+		log.Printf("[VM] Overall stats query for %s: %s", metric, query)
 		value := c.queryInstant(query, end)
 		switch metric {
 		case "upload_avg":
@@ -310,22 +332,9 @@ type vmDataPoint struct {
 }
 
 // queryRange executes a range query against VictoriaMetrics
-func (c *VMClient) queryRange(query string, start, end time.Time) ([]vmDataPoint, error) {
-	// Calculate appropriate step based on time range
-	duration := end.Sub(start)
-	var step int
-	switch {
-	case duration <= 1*time.Hour:
-		step = 10 // 10 seconds for short ranges
-	case duration <= 6*time.Hour:
-		step = 30 // 30 seconds
-	case duration <= 24*time.Hour:
-		step = 60 // 1 minute
-	case duration <= 7*24*time.Hour:
-		step = 300 // 5 minutes for week
-	default:
-		step = 3600 // 1 hour for longer periods
-	}
+func (c *VMClient) queryRange(query string, start, end time.Time, step int) ([]vmDataPoint, error) {
+	// Use the provided step parameter instead of auto-calculating
+	// This ensures the returned data points match what the frontend expects
 
 	// Build URL with proper encoding
 	baseURL := fmt.Sprintf("%s/api/v1/query_range", c.config.URL)
@@ -342,6 +351,8 @@ func (c *VMClient) queryRange(query string, start, end time.Time) ([]vmDataPoint
 	q.Add("step", fmt.Sprintf("%d", step))
 	req.URL.RawQuery = q.Encode()
 
+	log.Printf("[VM] Full request URL: %s", req.URL.String())
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
@@ -350,7 +361,14 @@ func (c *VMClient) queryRange(query string, start, end time.Time) ([]vmDataPoint
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[VM] HTTP error response: %s", string(body))
 		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Read body for logging
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
 	// Parse response
@@ -365,9 +383,12 @@ func (c *VMClient) queryRange(query string, start, end time.Time) ([]vmDataPoint
 		} `json:"data"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&vmResp); err != nil {
+	if err := json.Unmarshal(bodyBytes, &vmResp); err != nil {
+		log.Printf("[VM] Failed to decode response: %s", string(bodyBytes))
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
+
+	log.Printf("[VM] VM Response status: %s, result count: %d", vmResp.Status, len(vmResp.Data.Result))
 
 	if vmResp.Status != "success" {
 		return nil, fmt.Errorf("query failed: %s", vmResp.Status)
@@ -376,6 +397,9 @@ func (c *VMClient) queryRange(query string, start, end time.Time) ([]vmDataPoint
 	// Extract data points
 	var dataPoints []vmDataPoint
 	if len(vmResp.Data.Result) > 0 {
+		log.Printf("[VM] First result has %d values, metric labels: %v",
+			len(vmResp.Data.Result[0].Values), vmResp.Data.Result[0].Metric)
+
 		for _, value := range vmResp.Data.Result[0].Values {
 			if len(value) >= 2 {
 				timestamp := int64(value[0].(float64))
@@ -388,6 +412,8 @@ func (c *VMClient) queryRange(query string, start, end time.Time) ([]vmDataPoint
 				})
 			}
 		}
+	} else {
+		log.Printf("[VM] WARNING: Query returned 0 results. This means no data matched the query.")
 	}
 
 	return dataPoints, nil
@@ -454,20 +480,68 @@ func (c *VMClient) autoSelectInterval(start, end time.Time) string {
 	}
 }
 
+// QueryDebugIntervals queries VictoriaMetrics to find all interval labels for an interface
+func (c *VMClient) QueryDebugIntervals(query string) ([]string, error) {
+	baseURL := fmt.Sprintf("%s/api/v1/query", c.config.URL)
+	req, err := http.NewRequest("GET", baseURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	q := req.URL.Query()
+	q.Add("query", query)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var vmResp struct {
+		Status string `json:"status"`
+		Data   struct {
+			ResultType string `json:"resultType"`
+			Result     []struct {
+				Metric map[string]string `json:"metric"`
+			} `json:"result"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&vmResp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	if vmResp.Status != "success" {
+		return nil, fmt.Errorf("query failed: %s", vmResp.Status)
+	}
+
+	// Extract unique interval values
+	intervals := make([]string, 0)
+	for _, result := range vmResp.Data.Result {
+		if interval, ok := result.Metric["interval"]; ok {
+			intervals = append(intervals, interval)
+		}
+	}
+
+	return intervals, nil
+}
+
 // ============================================================================
 // Time Window Aggregator
 // ============================================================================
 
 // TimeWindowAggregator handles fixed-boundary time window aggregation
 type TimeWindowAggregator struct {
-	shortInterval time.Duration
-	longInterval  time.Duration
-	enableShort   bool
-	enableLong    bool
+	interval time.Duration
 
-	// Current aggregation windows
-	currentShortWindow *AggregationWindow
-	currentLongWindow  *AggregationWindow
+	// Current aggregation window
+	currentWindow *AggregationWindow
 
 	// Completed windows ready to send
 	completedWindows []*AggregationWindow
@@ -494,38 +568,23 @@ type WindowStats struct {
 }
 
 // NewTimeWindowAggregator creates a new time window aggregator
-func NewTimeWindowAggregator(shortInterval, longInterval time.Duration, enableShort, enableLong bool) *TimeWindowAggregator {
+func NewTimeWindowAggregator(interval time.Duration) *TimeWindowAggregator {
 	log.Printf("[Aggregator] Time window aggregator initialized")
-	if enableShort {
-		log.Printf("[Aggregator] Short-term window: %v", shortInterval)
-	}
-	if enableLong {
-		log.Printf("[Aggregator] Long-term window: %v", longInterval)
-	}
+	log.Printf("[Aggregator] Aggregation window: %v", interval)
 
 	return &TimeWindowAggregator{
-		shortInterval:    shortInterval,
-		longInterval:     longInterval,
-		enableShort:      enableShort,
-		enableLong:       enableLong,
+		interval:         interval,
 		completedWindows: make([]*AggregationWindow, 0),
 	}
 }
 
-// AddSample adds a sample to the current aggregation windows
+// AddSample adds a sample to the current aggregation window
 func (a *TimeWindowAggregator) AddSample(timestamp time.Time, interfaceName string, rxRate, txRate float64) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	// Process short-term window
-	if a.enableShort {
-		a.currentShortWindow = a.addToWindow(a.currentShortWindow, a.shortInterval, timestamp, interfaceName, rxRate, txRate)
-	}
-
-	// Process long-term window
-	if a.enableLong {
-		a.currentLongWindow = a.addToWindow(a.currentLongWindow, a.longInterval, timestamp, interfaceName, rxRate, txRate)
-	}
+	// Process aggregation window
+	a.currentWindow = a.addToWindow(a.currentWindow, a.interval, timestamp, interfaceName, rxRate, txRate)
 }
 
 // addToWindow adds a sample to a specific window, creating new window if needed

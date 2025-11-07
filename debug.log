@@ -1,0 +1,303 @@
+2025/11/07 16:53:23 Warning: Failed to enable ANSI support: The handle is invalid.
+[Config] Loading configuration from: .env.debug
+2025/11/07 16:53:23 ========================================
+2025/11/07 16:53:23 Mikrotik Interface Traffic Monitor v0.0.1
+2025/11/07 16:53:23 ========================================
+2025/11/07 16:53:23 Monitoring 1 interface(s): vlan2622
+2025/11/07 16:53:23 Enabled Features: Web (realtime+api+static on :9999), VictoriaMetrics ()
+2025/11/07 16:53:23 ========================================
+2025/11/07 16:53:23 Connected to Mikrotik at 175.100.109.154:65428
+2025/11/07 16:53:23 [VM] VictoriaMetrics client initialized (URL: http://43.161.250.190:28428)
+2025/11/07 16:53:23 [VM] Short interval: 10s, Long interval: 5m0s
+2025/11/07 16:53:23 [Aggregator] Time window aggregator initialized
+2025/11/07 16:53:23 [Web] Web server initialized (addr: :9999)
+2025/11/07 16:53:23 [Web] Developer mode: Using local files from 'web/' directory
+2025/11/07 16:53:23 [Web] 💡 Tip: Remove 'web/' directory to test production mode (embedded files)
+2025/11/07 16:53:23 [Web] Static files: Hot-reload enabled (changes take effect immediately)
+2025/11/07 16:53:23 [Web] Starting web server on :9999
+2025/11/07 16:53:48 [VM] Querying history: interface=vlan2622, query_interval=5m, storage_interval=300s, range=15:53:20 to 16:13:20
+2025/11/07 16:53:48 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:48 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502000&step=300
+2025/11/07 16:53:48 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:48 [VM] First result has 5 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 16:53:48 [VM] Query upload_avg returned 5 data points
+2025/11/07 16:53:48 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:48 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502000&step=300
+2025/11/07 16:53:48 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:48 [VM] First result has 5 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 16:53:48 [VM] Query download_avg returned 5 data points
+2025/11/07 16:53:48 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:48 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502000&step=300
+2025/11/07 16:53:48 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:48 [VM] First result has 5 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 16:53:48 [VM] Query upload_peak returned 5 data points
+2025/11/07 16:53:48 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:48 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502000&step=300
+2025/11/07 16:53:48 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:48 [VM] First result has 5 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 16:53:48 [VM] Query download_peak returned 5 data points
+2025/11/07 16:53:48 [VM] Querying overall stats with interval=300s
+2025/11/07 16:53:48 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[1200s])
+2025/11/07 16:53:48 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[1200s])
+2025/11/07 16:53:48 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[1200s])
+2025/11/07 16:53:48 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[1200s])
+2025/11/07 16:53:58 [VM] Querying history: interface=vlan2622, query_interval=5m, storage_interval=300s, range=15:20:00 to 16:20:00
+2025/11/07 16:53:58 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:58 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 16:53:58 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:58 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 16:53:58 [VM] Query upload_avg returned 13 data points
+2025/11/07 16:53:58 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:58 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 16:53:58 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:58 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 16:53:58 [VM] Query download_avg returned 13 data points
+2025/11/07 16:53:58 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:58 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 16:53:58 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:58 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 16:53:58 [VM] Query upload_peak returned 13 data points
+2025/11/07 16:53:58 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 16:53:58 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 16:53:58 [VM] VM Response status: success, result count: 1
+2025/11/07 16:53:58 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 16:53:58 [VM] Query download_peak returned 13 data points
+2025/11/07 16:53:58 [VM] Querying overall stats with interval=300s
+2025/11/07 16:53:58 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 16:53:58 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 16:53:58 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 16:53:58 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 16:54:07 [VM] Querying history: interface=vlan2622, query_interval=1m, storage_interval=300s, range=16:00:00 to 16:13:20
+2025/11/07 16:54:07 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 16:54:07 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502400&step=60
+2025/11/07 16:54:07 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:07 [VM] First result has 14 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 16:54:07 [VM] Query upload_avg returned 14 data points
+2025/11/07 16:54:07 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 16:54:07 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502400&step=60
+2025/11/07 16:54:07 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:07 [VM] First result has 14 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 16:54:07 [VM] Query download_avg returned 14 data points
+2025/11/07 16:54:07 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 16:54:07 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502400&step=60
+2025/11/07 16:54:07 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:07 [VM] First result has 14 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 16:54:07 [VM] Query upload_peak returned 14 data points
+2025/11/07 16:54:07 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 16:54:07 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503200&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762502400&step=60
+2025/11/07 16:54:07 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:07 [VM] First result has 14 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 16:54:07 [VM] Query download_peak returned 14 data points
+2025/11/07 16:54:07 [VM] Querying overall stats with interval=300s
+2025/11/07 16:54:07 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[800s])
+2025/11/07 16:54:07 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[800s])
+2025/11/07 16:54:07 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[800s])
+2025/11/07 16:54:07 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[800s])
+2025/11/07 16:54:15 [VM] Querying history: interface=vlan2622, query_interval=10s, storage_interval=10s, range=16:10:00 to 16:12:00
+2025/11/07 16:54:15 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="10s"} (step=10s)
+2025/11/07 16:54:15 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503120&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%2210s%22%7D&start=1762503000&step=10
+2025/11/07 16:54:15 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:15 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:10s]
+2025/11/07 16:54:15 [VM] Query download_avg returned 13 data points
+2025/11/07 16:54:15 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="10s"} (step=10s)
+2025/11/07 16:54:15 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503120&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%2210s%22%7D&start=1762503000&step=10
+2025/11/07 16:54:15 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:15 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:10s]
+2025/11/07 16:54:15 [VM] Query upload_peak returned 13 data points
+2025/11/07 16:54:15 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="10s"} (step=10s)
+2025/11/07 16:54:15 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503120&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%2210s%22%7D&start=1762503000&step=10
+2025/11/07 16:54:15 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:15 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:10s]
+2025/11/07 16:54:15 [VM] Query download_peak returned 13 data points
+2025/11/07 16:54:15 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="10s"} (step=10s)
+2025/11/07 16:54:15 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503120&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%2210s%22%7D&start=1762503000&step=10
+2025/11/07 16:54:15 [VM] VM Response status: success, result count: 1
+2025/11/07 16:54:15 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:10s]
+2025/11/07 16:54:15 [VM] Query upload_avg returned 13 data points
+2025/11/07 16:54:15 [VM] Querying overall stats with interval=10s
+2025/11/07 16:54:15 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="10s"}[120s])
+2025/11/07 16:54:15 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="10s"}[120s])
+2025/11/07 16:54:15 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="10s"}[120s])
+2025/11/07 16:54:15 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="10s"}[120s])
+2025/11/07 17:07:49 [VM] Querying history: interface=vlan2622, query_interval=5m, storage_interval=300s, range=15:20:00 to 16:20:00
+2025/11/07 17:07:49 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query upload_peak returned 13 data points
+2025/11/07 17:07:49 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query download_peak returned 13 data points
+2025/11/07 17:07:49 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query upload_avg returned 13 data points
+2025/11/07 17:07:49 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query download_avg returned 13 data points
+2025/11/07 17:07:49 [VM] Querying overall stats with interval=300s
+2025/11/07 17:07:49 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:07:49 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:07:49 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:07:49 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:07:49 [VM] Querying history: interface=vlan2622, query_interval=1m, storage_interval=300s, range=15:20:00 to 16:20:00
+2025/11/07 17:07:49 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query upload_avg returned 61 data points
+2025/11/07 17:07:49 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query download_avg returned 61 data points
+2025/11/07 17:07:49 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query upload_peak returned 61 data points
+2025/11/07 17:07:49 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:07:49 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:07:49 [VM] VM Response status: success, result count: 1
+2025/11/07 17:07:49 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:07:49 [VM] Query download_peak returned 61 data points
+2025/11/07 17:07:49 [VM] Querying overall stats with interval=300s
+2025/11/07 17:07:49 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:07:49 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:07:49 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:07:49 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Querying history: interface=vlan2622, query_interval=5m, storage_interval=300s, range=15:20:00 to 16:20:00
+2025/11/07 17:09:18 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query upload_avg returned 13 data points
+2025/11/07 17:09:18 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query download_avg returned 13 data points
+2025/11/07 17:09:18 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query upload_peak returned 13 data points
+2025/11/07 17:09:18 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=300
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 13 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query download_peak returned 13 data points
+2025/11/07 17:09:18 [VM] Querying overall stats with interval=300s
+2025/11/07 17:09:18 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Querying history: interface=vlan2622, query_interval=1m, storage_interval=300s, range=15:20:00 to 16:20:00
+2025/11/07 17:09:18 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_tx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query upload_avg returned 61 data points
+2025/11/07 17:09:18 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_rx_rate_avg interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query download_avg returned 61 data points
+2025/11/07 17:09:18 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_tx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query upload_peak returned 61 data points
+2025/11/07 17:09:18 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=60s)
+2025/11/07 17:09:18 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762503600&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762500000&step=60
+2025/11/07 17:09:18 [VM] VM Response status: success, result count: 1
+2025/11/07 17:09:18 [VM] First result has 61 values, metric labels: map[__name__:mikrotik_interface_rx_rate_peak interface:vlan2622 interval:300s]
+2025/11/07 17:09:18 [VM] Query download_peak returned 61 data points
+2025/11/07 17:09:18 [VM] Querying overall stats with interval=300s
+2025/11/07 17:09:18 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 17:09:18 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 18:03:44 [VM] Querying history: interface=vlan2622, query_interval=1h, storage_interval=300s, range=01:20:00 to 01:20:00
+2025/11/07 18:03:44 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:03:44 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731086400&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731000000&step=3600
+2025/11/07 18:03:44 [VM] VM Response status: success, result count: 0
+2025/11/07 18:03:44 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:03:44 [VM] Query download_avg returned 0 data points
+2025/11/07 18:03:44 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:03:44 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731086400&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731000000&step=3600
+2025/11/07 18:03:44 [VM] VM Response status: success, result count: 0
+2025/11/07 18:03:44 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:03:44 [VM] Query upload_peak returned 0 data points
+2025/11/07 18:03:44 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:03:44 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731086400&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731000000&step=3600
+2025/11/07 18:03:44 [VM] VM Response status: success, result count: 0
+2025/11/07 18:03:44 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:03:44 [VM] Query download_peak returned 0 data points
+2025/11/07 18:03:44 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:03:44 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731086400&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731000000&step=3600
+2025/11/07 18:03:44 [VM] VM Response status: success, result count: 0
+2025/11/07 18:03:44 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:03:44 [VM] Query upload_avg returned 0 data points
+2025/11/07 18:03:44 [VM] Querying overall stats with interval=300s
+2025/11/07 18:03:44 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[86400s])
+2025/11/07 18:03:44 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[86400s])
+2025/11/07 18:03:44 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[86400s])
+2025/11/07 18:03:44 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[86400s])
+2025/11/07 18:04:39 [VM] Querying history: interface=vlan2622, query_interval=5m, storage_interval=300s, range=01:04:40 to 02:04:40
+2025/11/07 18:04:39 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 18:04:39 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762538680&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762535080&step=300
+2025/11/07 18:04:39 [VM] VM Response status: success, result count: 0
+2025/11/07 18:04:39 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:04:39 [VM] Query download_avg returned 0 data points
+2025/11/07 18:04:39 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 18:04:39 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762538680&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762535080&step=300
+2025/11/07 18:04:39 [VM] VM Response status: success, result count: 0
+2025/11/07 18:04:39 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:04:39 [VM] Query upload_peak returned 0 data points
+2025/11/07 18:04:39 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 18:04:39 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762538680&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762535080&step=300
+2025/11/07 18:04:39 [VM] VM Response status: success, result count: 0
+2025/11/07 18:04:39 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:04:39 [VM] Query download_peak returned 0 data points
+2025/11/07 18:04:39 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=300s)
+2025/11/07 18:04:39 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1762538680&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1762535080&step=300
+2025/11/07 18:04:39 [VM] VM Response status: success, result count: 0
+2025/11/07 18:04:39 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:04:39 [VM] Query upload_avg returned 0 data points
+2025/11/07 18:04:39 [VM] Querying overall stats with interval=300s
+2025/11/07 18:04:39 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 18:04:39 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 18:04:39 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 18:04:39 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[3600s])
+2025/11/07 18:05:01 [VM] Querying history: interface=vlan2622, query_interval=1h, storage_interval=300s, range=16:40:00 to 16:40:00
+2025/11/07 18:05:01 [VM] Executing query for download_peak: mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:05:01 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731141600&query=mikrotik_interface_rx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731055200&step=3600
+2025/11/07 18:05:01 [VM] VM Response status: success, result count: 0
+2025/11/07 18:05:01 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:05:01 [VM] Query download_peak returned 0 data points
+2025/11/07 18:05:01 [VM] Executing query for upload_avg: mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:05:01 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731141600&query=mikrotik_interface_tx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731055200&step=3600
+2025/11/07 18:05:01 [VM] VM Response status: success, result count: 0
+2025/11/07 18:05:01 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:05:01 [VM] Query upload_avg returned 0 data points
+2025/11/07 18:05:01 [VM] Executing query for download_avg: mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:05:01 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731141600&query=mikrotik_interface_rx_rate_avg%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731055200&step=3600
+2025/11/07 18:05:01 [VM] VM Response status: success, result count: 0
+2025/11/07 18:05:01 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:05:01 [VM] Query download_avg returned 0 data points
+2025/11/07 18:05:01 [VM] Executing query for upload_peak: mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"} (step=3600s)
+2025/11/07 18:05:01 [VM] Full request URL: http://43.161.250.190:28428/api/v1/query_range?end=1731141600&query=mikrotik_interface_tx_rate_peak%7Binterface%3D%22vlan2622%22%2Cinterval%3D%22300s%22%7D&start=1731055200&step=3600
+2025/11/07 18:05:01 [VM] VM Response status: success, result count: 0
+2025/11/07 18:05:01 [VM] WARNING: Query returned 0 results. This means no data matched the query.
+2025/11/07 18:05:01 [VM] Query upload_peak returned 0 data points
+2025/11/07 18:05:01 [VM] Querying overall stats with interval=300s
+2025/11/07 18:05:01 [VM] Overall stats query for upload_avg: avg_over_time(mikrotik_interface_tx_rate_avg{interface="vlan2622",interval="300s"}[86400s])
+2025/11/07 18:05:01 [VM] Overall stats query for download_avg: avg_over_time(mikrotik_interface_rx_rate_avg{interface="vlan2622",interval="300s"}[86400s])
+2025/11/07 18:05:01 [VM] Overall stats query for upload_peak: max_over_time(mikrotik_interface_tx_rate_peak{interface="vlan2622",interval="300s"}[86400s])
+2025/11/07 18:05:01 [VM] Overall stats query for download_peak: max_over_time(mikrotik_interface_rx_rate_peak{interface="vlan2622",interval="300s"}[86400s])

@@ -15,7 +15,11 @@
       "Bash(tree:*)",
       "Bash(chmod:*)",
       "Bash(powershell:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(curl:*)",
+      "Bash(.mikrotik-stats.exe --env=.env.debug)",
+      "Bash(DISPLAY_MODE=append timeout 6 go run:*)",
+      "Bash(timeout 5 bash:*)"
     ],
     "deny": [],
     "ask": []

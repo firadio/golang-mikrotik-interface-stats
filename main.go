@@ -79,14 +79,7 @@ func printStartupInfo(config *Config) {
 	}
 
 	if config.VictoriaMetrics != nil {
-		vmFeatures := []string{}
-		if config.VictoriaMetrics.EnableShort {
-			vmFeatures = append(vmFeatures, fmt.Sprintf("short:%v", config.VictoriaMetrics.ShortInterval))
-		}
-		if config.VictoriaMetrics.EnableLong {
-			vmFeatures = append(vmFeatures, fmt.Sprintf("long:%v", config.VictoriaMetrics.LongInterval))
-		}
-		features = append(features, fmt.Sprintf("VictoriaMetrics (%s)", strings.Join(vmFeatures, "+")))
+		features = append(features, fmt.Sprintf("VictoriaMetrics (%v interval)", config.VictoriaMetrics.Interval))
 	}
 
 	if len(features) == 0 {

@@ -59,20 +59,23 @@ type WebConfig struct {
 
 // VMConfig holds VictoriaMetrics configuration
 type VMConfig struct {
-	Enabled       bool          // Enable VictoriaMetrics integration
-	URL           string        // VictoriaMetrics endpoint
-	ShortInterval time.Duration // Short-term aggregation interval (e.g., 10s)
-	LongInterval  time.Duration // Long-term aggregation interval (e.g., 5m)
-	EnableShort   bool          // Enable short-term aggregation
-	EnableLong    bool          // Enable long-term aggregation
-	Timeout       time.Duration // HTTP request timeout
-	RetryCount    int           // Number of retries on failure
+	Enabled    bool          // Enable VictoriaMetrics integration
+	URL        string        // VictoriaMetrics endpoint
+	Interval   time.Duration // Data aggregation interval (default: 10s)
+	Timeout    time.Duration // HTTP request timeout
+	RetryCount int           // Number of retries on failure
 }
 
 // LoadConfig loads configuration from .env file and environment variables
 func LoadConfig() (*Config, error) {
+	// Check for custom env file from command line
+	envFile := ".env"
+	if len(os.Args) > 1 && strings.HasPrefix(os.Args[1], "--env=") {
+		envFile = strings.TrimPrefix(os.Args[1], "--env=")
+	}
+
 	// Load .env file if present (optional)
-	loadEnvFile(".env")
+	loadEnvFile(envFile)
 
 	// Parse and validate configuration
 	config := &Config{}
@@ -175,14 +178,11 @@ func loadVMConfig(config *Config) {
 	}
 
 	config.VictoriaMetrics = &VMConfig{
-		Enabled:       true,
-		URL:           getEnvOrDefault("VM_URL", "http://localhost:8428"),
-		ShortInterval: parseDuration(os.Getenv("VM_SHORT_INTERVAL"), 10*time.Second),
-		LongInterval:  parseDuration(os.Getenv("VM_LONG_INTERVAL"), 5*time.Minute),
-		EnableShort:   parseBool(os.Getenv("VM_ENABLE_SHORT"), true),
-		EnableLong:    parseBool(os.Getenv("VM_ENABLE_LONG"), true),
-		Timeout:       parseDuration(os.Getenv("VM_TIMEOUT"), 5*time.Second),
-		RetryCount:    parseIntWithDefault(os.Getenv("VM_RETRY_COUNT"), 3, 0, 10),
+		Enabled:    true,
+		URL:        getEnvOrDefault("VM_URL", "http://localhost:8428"),
+		Interval:   parseDuration(os.Getenv("VM_INTERVAL"), 10*time.Second),
+		Timeout:    parseDuration(os.Getenv("VM_TIMEOUT"), 5*time.Second),
+		RetryCount: parseIntWithDefault(os.Getenv("VM_RETRY_COUNT"), 3, 0, 10),
 	}
 }
 
@@ -226,11 +226,8 @@ func (c *Config) Validate() error {
 		if c.VictoriaMetrics.URL == "" {
 			return fmt.Errorf("VM_URL must be specified when VM_ENABLED=true")
 		}
-		if c.VictoriaMetrics.ShortInterval < 1*time.Second {
-			return fmt.Errorf("VM_SHORT_INTERVAL must be at least 1 second")
-		}
-		if c.VictoriaMetrics.LongInterval < c.VictoriaMetrics.ShortInterval {
-			return fmt.Errorf("VM_LONG_INTERVAL must be >= VM_SHORT_INTERVAL")
+		if c.VictoriaMetrics.Interval < 1*time.Second {
+			return fmt.Errorf("VM_INTERVAL must be at least 1 second")
 		}
 	}
 
@@ -245,9 +242,11 @@ func (c *Config) Validate() error {
 func loadEnvFile(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
+		fmt.Printf("[Config] No %s file found (optional)\n", filename)
 		return // File doesn't exist, use environment variables only
 	}
 	defer file.Close()
+	fmt.Printf("[Config] Loading configuration from: %s\n", filename)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

@@ -55,12 +55,7 @@ func NewMonitor(client *MikrotikClient, config *Config) *Monitor {
 	// Initialize VictoriaMetrics if enabled (BEFORE web server to ensure vmClient is available)
 	if config.VictoriaMetrics != nil {
 		m.vmClient = NewVMClient(config.VictoriaMetrics)
-		m.aggregator = NewTimeWindowAggregator(
-			config.VictoriaMetrics.ShortInterval,
-			config.VictoriaMetrics.LongInterval,
-			config.VictoriaMetrics.EnableShort,
-			config.VictoriaMetrics.EnableLong,
-		)
+		m.aggregator = NewTimeWindowAggregator(config.VictoriaMetrics.Interval)
 	}
 
 	// Initialize web server if enabled (AFTER VictoriaMetrics to get vmClient)
