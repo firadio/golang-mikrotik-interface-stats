@@ -12,6 +12,10 @@ let modalChart = null;
 let currentZoomedInterface = null;
 let interfaceStats = {}; // Store current statistics for each interface
 
+// Frontend statistics calculation
+const STATS_WINDOW = 10; // 10 seconds window for avg/peak calculation
+let statsHistory = {}; // Store historical data points for each interface
+
 // Chart configuration
 const MAX_DATA_POINTS = 60; // Show last 60 seconds
 const CHART_COLORS = {
@@ -43,6 +47,58 @@ function connect() {
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         updateDisplay(data);
+    };
+}
+
+// ============================================================================
+// Frontend Statistics Calculation
+// ============================================================================
+
+function updateStatsHistory(interfaceName, timestamp, uploadRate, downloadRate) {
+    if (!statsHistory[interfaceName]) {
+        statsHistory[interfaceName] = [];
+    }
+
+    const history = statsHistory[interfaceName];
+
+    // Add new data point
+    history.push({
+        time: new Date(timestamp),
+        upload: uploadRate,
+        download: downloadRate
+    });
+
+    // Remove data points older than STATS_WINDOW seconds
+    const cutoffTime = new Date(timestamp) - (STATS_WINDOW * 1000);
+    while (history.length > 0 && history[0].time < cutoffTime) {
+        history.shift();
+    }
+}
+
+function calculateStats(interfaceName) {
+    const history = statsHistory[interfaceName];
+
+    if (!history || history.length === 0) {
+        return { avgUpload: 0, avgDownload: 0, peakUpload: 0, peakDownload: 0 };
+    }
+
+    let sumUpload = 0;
+    let sumDownload = 0;
+    let maxUpload = 0;
+    let maxDownload = 0;
+
+    for (const point of history) {
+        sumUpload += point.upload;
+        sumDownload += point.download;
+        maxUpload = Math.max(maxUpload, point.upload);
+        maxDownload = Math.max(maxDownload, point.download);
+    }
+
+    return {
+        avgUpload: sumUpload / history.length,
+        avgDownload: sumDownload / history.length,
+        peakUpload: maxUpload,
+        peakDownload: maxDownload
     };
 }
 
@@ -242,23 +298,38 @@ function updateDisplay(data) {
             createChart(canvasId, name);
         }
 
-        // Update stats display
+        // Update stats history for frontend calculation
+        updateStatsHistory(name, data.timestamp, stats.upload_rate, stats.download_rate);
+
+        // Calculate frontend stats
+        const calculatedStats = calculateStats(name);
+
+        // Update current display
         card.querySelector('.current-upload').textContent = formatBytes(stats.upload_rate);
         card.querySelector('.current-download').textContent = formatBytes(stats.download_rate);
-        card.querySelector('.avg-upload').textContent = formatBytes(stats.upload_avg);
-        card.querySelector('.avg-download').textContent = formatBytes(stats.download_avg);
-        card.querySelector('.peak-upload').textContent = formatBytes(stats.upload_peak);
-        card.querySelector('.peak-download').textContent = formatBytes(stats.download_peak);
 
-        // Store stats for modal
-        interfaceStats[name] = stats;
+        // Update calculated avg/peak
+        card.querySelector('.avg-upload').textContent = formatBytes(calculatedStats.avgUpload);
+        card.querySelector('.avg-download').textContent = formatBytes(calculatedStats.avgDownload);
+        card.querySelector('.peak-upload').textContent = formatBytes(calculatedStats.peakUpload);
+        card.querySelector('.peak-download').textContent = formatBytes(calculatedStats.peakDownload);
+
+        // Store combined stats for modal
+        interfaceStats[name] = {
+            upload_rate: stats.upload_rate,
+            download_rate: stats.download_rate,
+            upload_avg: calculatedStats.avgUpload,
+            download_avg: calculatedStats.avgDownload,
+            upload_peak: calculatedStats.peakUpload,
+            download_peak: calculatedStats.peakDownload
+        };
 
         // Update chart
         updateChart(name, data.timestamp, stats.upload_rate, stats.download_rate);
 
         // Update modal stats if this interface is currently zoomed
         if (currentZoomedInterface === name) {
-            updateModalStats(stats);
+            updateModalStats(interfaceStats[name]);
         }
     }
 

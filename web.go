@@ -283,36 +283,22 @@ func (w *WebServer) convertToDisplayFormat(timestamp time.Time, stats map[string
 	interfaces := make(map[string]interface{})
 
 	for name, info := range stats {
-		var uploadRate, downloadRate, uploadAvg, downloadAvg, uploadPeak, downloadPeak float64
+		var uploadRate, downloadRate float64
 
 		// Convert RX/TX to Upload/Download based on interface type
 		if w.uplinkInterfaces[name] {
 			// Uplink: no swap
 			uploadRate = info.TxRate
 			downloadRate = info.RxRate
-			uploadAvg = info.TxAvg
-			downloadAvg = info.RxAvg
-			uploadPeak = info.TxPeak
-			downloadPeak = info.RxPeak
 		} else {
 			// Downlink: swap TX/RX
 			uploadRate = info.RxRate
 			downloadRate = info.TxRate
-			uploadAvg = info.RxAvg
-			downloadAvg = info.TxAvg
-			uploadPeak = info.RxPeak
-			downloadPeak = info.TxPeak
 		}
 
 		interfaces[name] = map[string]interface{}{
-			"upload_rate":     uploadRate,
-			"download_rate":   downloadRate,
-			"upload_avg":      uploadAvg,
-			"download_avg":    downloadAvg,
-			"upload_peak":     uploadPeak,
-			"download_peak":   downloadPeak,
-			"upload_mbps":     uploadRate * 8 / 1000000,  // Convert to Mbps
-			"download_mbps":   downloadRate * 8 / 1000000,
+			"upload_rate":   uploadRate,
+			"download_rate": downloadRate,
 		}
 	}
 

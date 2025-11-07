@@ -147,7 +147,10 @@ func (m *Monitor) updateAndDisplay() error {
 	}
 
 	now := time.Now()
-	rateInfoMap := m.calculateRates(stats, now)
+
+	// Check if we need to calculate statistics (only for terminal/log output)
+	needStats := m.terminalWriter != nil || m.logWriter != nil
+	rateInfoMap := m.calculateRates(stats, now, needStats)
 
 	if len(rateInfoMap) == 0 {
 		return nil
@@ -188,7 +191,8 @@ func (m *Monitor) updateAndDisplay() error {
 }
 
 // calculateRates computes current rates and statistics from raw counters
-func (m *Monitor) calculateRates(stats []InterfaceStats, now time.Time) map[string]*RateInfo {
+// If needStats is false, only instantaneous rates are calculated (skipping avg/peak)
+func (m *Monitor) calculateRates(stats []InterfaceStats, now time.Time, needStats bool) map[string]*RateInfo {
 	rateInfoMap := make(map[string]*RateInfo, len(stats))
 
 	for _, stat := range stats {
@@ -216,17 +220,22 @@ func (m *Monitor) calculateRates(stats []InterfaceStats, now time.Time) map[stri
 		rxRate := float64(stat.RxByte-prev.LastRxByte) / timeDiff
 		txRate := float64(stat.TxByte-prev.LastTxByte) / timeDiff
 
-		// Update ring buffer with new rates
-		prev.TxHistory[prev.HistoryIndex] = txRate
-		prev.RxHistory[prev.HistoryIndex] = rxRate
-		prev.HistoryIndex = (prev.HistoryIndex + 1) % m.statsWindowSize
-		if prev.HistoryCount < m.statsWindowSize {
-			prev.HistoryCount++
-		}
+		var txAvg, txPeak, rxAvg, rxPeak float64
 
-		// Calculate statistics from history
-		txAvg, txPeak := m.calculateStats(prev.TxHistory, prev.HistoryCount)
-		rxAvg, rxPeak := m.calculateStats(prev.RxHistory, prev.HistoryCount)
+		// Only calculate statistics if needed (for terminal/log output)
+		if needStats {
+			// Update ring buffer with new rates
+			prev.TxHistory[prev.HistoryIndex] = txRate
+			prev.RxHistory[prev.HistoryIndex] = rxRate
+			prev.HistoryIndex = (prev.HistoryIndex + 1) % m.statsWindowSize
+			if prev.HistoryCount < m.statsWindowSize {
+				prev.HistoryCount++
+			}
+
+			// Calculate statistics from history
+			txAvg, txPeak = m.calculateStats(prev.TxHistory, prev.HistoryCount)
+			rxAvg, rxPeak = m.calculateStats(prev.RxHistory, prev.HistoryCount)
+		}
 
 		// Update baseline for next iteration
 		prev.LastRxByte = stat.RxByte

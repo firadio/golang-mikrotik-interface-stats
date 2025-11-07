@@ -157,13 +157,7 @@ h1::before {
     padding: 0;
     box-shadow: none;
     border: none;
-    border-bottom: 2px solid rgba(71, 85, 105, 0.4);
     padding-bottom: 15px;
-    transition: border-color 0.2s;
-}
-
-.interface-card:hover {
-    border-bottom-color: rgba(71, 85, 105, 0.7);
 }
 
 .interface-header {
