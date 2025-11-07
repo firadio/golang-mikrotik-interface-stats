@@ -459,7 +459,6 @@ async function loadInterfaceLabels() {
         const response = await fetch('/api/config/labels');
         if (response.ok) {
             interfaceLabels = await response.json();
-            console.log('Loaded interface labels:', interfaceLabels);
         }
     } catch (error) {
         console.error('Error loading interface labels:', error);
@@ -539,9 +538,7 @@ function makeInterfaceNameEditable(interfaceName, nameElement, editBtn) {
                     body: JSON.stringify({ [interfaceName]: newLabel })
                 });
 
-                if (response.ok) {
-                    console.log(`Label saved: ${interfaceName} -> ${newLabel}`);
-                } else {
+                if (!response.ok) {
                     console.error('Failed to save label');
                 }
             } catch (error) {

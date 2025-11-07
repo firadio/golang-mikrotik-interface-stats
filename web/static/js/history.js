@@ -271,9 +271,6 @@ function onTimeRangeChange(range) {
     const { start, end } = getTimeRange(range);
     const intervals = getAvailableIntervals(start, end);
 
-    console.log(`Time Range: ${range}, Duration: ${((end - start) / 1000 / 3600).toFixed(1)}h`);
-    console.log('Available Intervals:', intervals);
-
     // 渲染间隔选择器
     renderIntervalSelector(intervals);
 

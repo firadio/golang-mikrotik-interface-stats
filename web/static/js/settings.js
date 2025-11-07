@@ -19,8 +19,6 @@ async function loadCurrentData() {
         const data = await response.json();
         // data.interfaces is an object with interface names as keys
         monitoredInterfaces = Object.keys(data.interfaces);
-
-        console.log('Monitored interfaces:', monitoredInterfaces);
     } catch (error) {
         console.error('Error loading monitored interfaces:', error);
         showStatus('Error loading interface list', true);
@@ -34,8 +32,6 @@ async function loadLabels() {
         if (!response.ok) throw new Error('Failed to fetch labels');
 
         interfaceLabels = await response.json();
-        console.log('Loaded labels:', interfaceLabels);
-
         renderLabelEditor();
     } catch (error) {
         console.error('Error loading labels:', error);
