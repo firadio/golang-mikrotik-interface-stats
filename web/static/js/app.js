@@ -7,6 +7,7 @@ let reconnectInterval = 3000;
 let charts = {};
 let chartData = {};
 let availableInterfaces = new Set();
+let interfaceLabels = {}; // Store custom labels for interfaces
 
 // Chart configuration
 const MAX_DATA_POINTS = 60; // Show last 60 seconds
@@ -265,9 +266,16 @@ function createInterfaceCard(name) {
     card.className = 'interface-card';
     card.id = 'card-' + name;
 
+    const displayName = getInterfaceDisplayName(name);
+    const hasCustomLabel = interfaceLabels[name] && interfaceLabels[name] !== name;
+
     card.innerHTML = `
         <div class="interface-header">
-            <div class="interface-name">${name}</div>
+            <div class="interface-name-wrapper">
+                <span class="interface-name" data-interface="${name}">${displayName}</span>
+                ${hasCustomLabel ? `<span class="original-name">(${name})</span>` : ''}
+                <button class="edit-btn" data-interface="${name}" title="Edit label">✏️</button>
+            </div>
             <div class="interface-stats">
                 <button class="history-btn" onclick="openHistoryPanel('${name}')">📊 History</button>
                 <div class="stat-badge upload">
@@ -305,6 +313,15 @@ function createInterfaceCard(name) {
         </div>
     `;
 
+    // Make interface name editable after DOM is created
+    setTimeout(() => {
+        const nameElement = card.querySelector('.interface-name');
+        const editBtn = card.querySelector('.edit-btn');
+        if (nameElement && editBtn) {
+            makeInterfaceNameEditable(name, nameElement, editBtn);
+        }
+    }, 0);
+
     return card;
 }
 
@@ -314,6 +331,9 @@ function createInterfaceCard(name) {
 
 function updateInterfaceSelector() {
     const select = document.getElementById('historyInterface');
+    // This element only exists in history.html, not in index.html
+    if (!select) return;
+
     const currentValue = select.value;
 
     // Clear and repopulate
@@ -345,8 +365,135 @@ function openHistoryPanel(interfaceName) {
 }
 
 // ============================================================================
+// Interface Label Management
+// ============================================================================
+
+// Load interface labels from server
+async function loadInterfaceLabels() {
+    try {
+        const response = await fetch('/api/config/labels');
+        if (response.ok) {
+            interfaceLabels = await response.json();
+            console.log('Loaded interface labels:', interfaceLabels);
+        }
+    } catch (error) {
+        console.error('Error loading interface labels:', error);
+    }
+}
+
+// Get display name for an interface
+function getInterfaceDisplayName(interfaceName) {
+    return interfaceLabels[interfaceName] || interfaceName;
+}
+
+// Update interface name display after editing
+function updateInterfaceNameDisplay(interfaceName, wrapper) {
+    const displayName = getInterfaceDisplayName(interfaceName);
+    const hasCustomLabel = interfaceLabels[interfaceName] && interfaceLabels[interfaceName] !== interfaceName;
+
+    // Rebuild the wrapper content
+    wrapper.innerHTML = `
+        <span class="interface-name" data-interface="${interfaceName}">${displayName}</span>
+        ${hasCustomLabel ? `<span class="original-name">(${interfaceName})</span>` : ''}
+        <button class="edit-btn" data-interface="${interfaceName}" title="Edit label">✏️</button>
+    `;
+
+    // Re-attach event listeners
+    const nameElement = wrapper.querySelector('.interface-name');
+    const editBtn = wrapper.querySelector('.edit-btn');
+    if (nameElement && editBtn) {
+        makeInterfaceNameEditable(interfaceName, nameElement, editBtn);
+    }
+}
+
+// Make interface name editable on double-click or edit button click
+function makeInterfaceNameEditable(interfaceName, nameElement, editBtn) {
+    nameElement.title = 'Double-click to edit label';
+
+    const startEdit = () => {
+        const currentLabel = getInterfaceDisplayName(interfaceName);
+        const wrapper = nameElement.parentElement;
+
+        // Create input element
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentLabel;
+        input.className = 'interface-name-input';
+        input.style.cssText = `
+            flex: 1;
+            font-size: inherit;
+            font-weight: inherit;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            padding: 4px 8px;
+            color: inherit;
+        `;
+
+        // Save original content
+        const originalContent = wrapper.innerHTML;
+
+        // Replace content with input
+        wrapper.innerHTML = '';
+        wrapper.appendChild(input);
+        input.focus();
+        input.select();
+
+        // Save on blur or Enter key
+        const saveLabel = async () => {
+            const newLabel = input.value.trim();
+
+            // Update label in memory
+            interfaceLabels[interfaceName] = newLabel;
+
+            // Save to server
+            try {
+                const response = await fetch('/api/config/labels', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [interfaceName]: newLabel })
+                });
+
+                if (response.ok) {
+                    console.log(`Label saved: ${interfaceName} -> ${newLabel}`);
+                } else {
+                    console.error('Failed to save label');
+                }
+            } catch (error) {
+                console.error('Error saving label:', error);
+            }
+
+            // Update the display without recreating the card
+            updateInterfaceNameDisplay(interfaceName, wrapper);
+        };
+
+        let saved = false;
+        input.addEventListener('blur', () => {
+            if (!saved) {
+                saved = true;
+                saveLabel();
+            }
+        });
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saved = true;
+                saveLabel();
+            }
+        });
+    };
+
+    // Double-click on name to edit
+    nameElement.addEventListener('dblclick', startEdit);
+
+    // Click edit button to edit
+    editBtn.addEventListener('click', startEdit);
+}
+
+// ============================================================================
 // Initialize
 // ============================================================================
 
 // Start connection when page loads
-connect();
+loadInterfaceLabels().then(() => {
+    connect();
+});

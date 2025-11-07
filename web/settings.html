@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Mikrotik Interface Monitor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .settings-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .settings-section h2 {
+            margin-top: 0;
+            color: var(--text-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .label-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .label-item {
+            display: grid;
+            grid-template-columns: 200px 1fr auto;
+            gap: 15px;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg-color);
+            border-radius: 4px;
+        }
+
+        .label-item label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .label-item input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        .label-item input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .label-item .reset-btn {
+            padding: 6px 12px;
+            background: #666;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .label-item .reset-btn:hover {
+            background: #555;
+        }
+
+        .save-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .save-btn {
+            padding: 10px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .save-btn:hover {
+            background: #45a049;
+        }
+
+        .save-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status-message {
+            color: #4CAF50;
+            font-size: 14px;
+        }
+
+        .status-message.error {
+            color: #f44336;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <a href="/" class="back-link">← Back to Monitor</a>
+
+        <h1>⚙️ Settings</h1>
+
+        <div class="settings-section">
+            <h2>Interface Labels</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                Customize display names for your interfaces. Leave empty to use the original interface name.
+            </p>
+
+            <div id="labelEditor" class="label-editor">
+                <!-- Labels will be loaded here -->
+            </div>
+
+            <div class="save-section">
+                <div id="statusMessage" class="status-message"></div>
+                <button id="saveBtn" class="save-btn" onclick="saveLabels()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/settings.js"></script>
+</body>
+</html>

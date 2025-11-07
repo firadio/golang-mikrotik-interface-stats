@@ -28,7 +28,8 @@ type WebServer struct {
 	config           *WebConfig
 	uplinkInterfaces map[string]bool
 	server           *http.Server
-	vmClient         *VMClient // For historical data queries
+	vmClient         *VMClient         // For historical data queries
+	userConfig       *UserConfigManager // For user configuration management
 
 	// WebSocket client management
 	clients   map[*websocket.Conn]bool
@@ -77,10 +78,17 @@ func NewWebServer(config *WebConfig, uplinkInterfaces []string, vmClient *VMClie
 		uplinkSet[iface] = true
 	}
 
+	// Initialize user configuration manager
+	userConfigMgr, err := NewUserConfigManager()
+	if err != nil {
+		log.Printf("[Web] Warning: Failed to initialize user config: %v", err)
+	}
+
 	ws := &WebServer{
 		config:           config,
 		uplinkInterfaces: uplinkSet,
 		vmClient:         vmClient,
+		userConfig:       userConfigMgr,
 		clients:          make(map[*websocket.Conn]bool),
 		latestStats:      make(map[string]*RateInfo),
 		upgrader: websocket.Upgrader{
@@ -115,6 +123,7 @@ func NewWebServer(config *WebConfig, uplinkInterfaces []string, vmClient *VMClie
 	if config.EnableAPI {
 		mux.HandleFunc("/api/current", ws.handleCurrentStats)
 		mux.HandleFunc("/api/history", ws.handleHistoryQuery)
+		mux.HandleFunc("/api/config/labels", ws.handleInterfaceLabels)
 	}
 
 	if config.EnableRealtime {
@@ -418,5 +427,50 @@ func (w *WebServer) convertHistoryToDisplayFormat(resp *HistoryResponse) {
 			dp.UploadAvg, dp.DownloadAvg = dp.DownloadAvg, dp.UploadAvg
 			dp.UploadPeak, dp.DownloadPeak = dp.DownloadPeak, dp.UploadPeak
 		}
+	}
+}
+
+// ============================================================================
+// User Configuration API
+// ============================================================================
+
+// handleInterfaceLabels handles GET and PUT requests for interface labels
+func (ws *WebServer) handleInterfaceLabels(w http.ResponseWriter, r *http.Request) {
+	if ws.userConfig == nil {
+		http.Error(w, "User configuration not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		// Return all interface labels
+		labels := ws.userConfig.GetAllInterfaceLabels()
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(labels); err != nil {
+			log.Printf("[Web] Error encoding interface labels: %v", err)
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
+
+	case http.MethodPut:
+		// Update interface labels
+		var labels map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&labels); err != nil {
+			http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+			return
+		}
+
+		if err := ws.userConfig.UpdateInterfaceLabels(labels); err != nil {
+			log.Printf("[Web] Error updating interface labels: %v", err)
+			http.Error(w, "Failed to save configuration", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
