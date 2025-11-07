@@ -45,9 +45,9 @@
 在项目根目录创建 `.env` 文件或设置环境变量：
 
 ```env
-MIKROTIK_HOST=175.100.109.154
-MIKROTIK_PORT=65428
-MIKROTIK_USERNAME=your_username
+MIKROTIK_HOST=192.168.88.1
+MIKROTIK_PORT=8728
+MIKROTIK_USERNAME=admin
 MIKROTIK_PASSWORD=your_password
 
 # 接口列表（逗号分隔）
@@ -263,7 +263,7 @@ vlan2624         0.58       3.19       0.52       3.10       0.65       3.50
 
 **追加模式：**
 ```
-2025/11/07 01:09:12 已连接到 Mikrotik：175.100.109.154:65428
+2025/11/07 01:09:12 已连接到 Mikrotik：192.168.88.1:8728
 
 监控接口流量（Ctrl+C 停止）：
 ================================================================================
@@ -289,7 +289,7 @@ vlan2624          0.58 MB/s            3.19 MB/s
 
 **日志模式（OUTPUT_MODE=log）：**
 ```
-2025/11/07 01:09:12 已连接到 Mikrotik：175.100.109.154:65428
+2025/11/07 01:09:12 已连接到 Mikrotik：192.168.88.1:8728
 2025/11/07 01:09:12 Mikrotik 接口流量监控已启动
 2025/11/07 01:09:13 interface=vlan2622 upload=18.12 KB/s download=15.82 KB/s
 2025/11/07 01:09:13 interface=vlan2624 upload=655.47 KB/s download=3.00 MB/s

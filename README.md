@@ -45,9 +45,9 @@ English | [简体中文](README.zh-CN.md)
 Create a `.env` file in the project root or set environment variables:
 
 ```env
-MIKROTIK_HOST=175.100.109.154
-MIKROTIK_PORT=65428
-MIKROTIK_USERNAME=your_username
+MIKROTIK_HOST=192.168.88.1
+MIKROTIK_PORT=8728
+MIKROTIK_USERNAME=admin
 MIKROTIK_PASSWORD=your_password
 
 # Interface list (comma-separated)
@@ -263,7 +263,7 @@ Note: Display shows "Upload" and "Download" from user perspective. If an interfa
 
 **Append Mode:**
 ```
-2025/11/07 01:09:12 Connected to Mikrotik at 175.100.109.154:65428
+2025/11/07 01:09:12 Connected to Mikrotik at 192.168.88.1:8728
 
 Monitoring interface traffic (Ctrl+C to stop):
 ================================================================================
@@ -289,7 +289,7 @@ Press Ctrl+C to stop
 
 **Log mode (OUTPUT_MODE=log):**
 ```
-2025/11/07 01:09:12 Connected to Mikrotik at 175.100.109.154:65428
+2025/11/07 01:09:12 Connected to Mikrotik at 192.168.88.1:8728
 2025/11/07 01:09:12 Mikrotik Interface Traffic Monitor started
 2025/11/07 01:09:13 interface=vlan2622 upload=18.12 KB/s download=15.82 KB/s
 2025/11/07 01:09:13 interface=vlan2624 upload=655.47 KB/s download=3.00 MB/s
